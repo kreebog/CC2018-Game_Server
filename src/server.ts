@@ -1,7 +1,7 @@
 require('dotenv').config();
 import * as env from './consts';
 import { IMazeStub, IMaze, ICell, IScore, GAME_RESULTS } from 'cc2018-ts-lib'; // import class interfaces
-import {Logger, Maze, Cell, Enums} from 'cc2018-ts-lib'; // import classes
+import {Logger, Score, Maze, Cell, Enums} from 'cc2018-ts-lib'; // import classes
 import { format } from 'util';
 import { LOG_LEVELS } from 'cc2018-ts-lib/dist/Logger';
 import * as svc from './request';
@@ -64,17 +64,29 @@ function dumpArray(list:Array<any>, key: string) {
     });
 }
 
+// async function doThing(): Promise<Score> {
+//     return new Promise<Score>((resolve, reject) => {
+//         svc.doRequest
+//     });
+// }
+
+
 /*
 // test getting scores
 doRequest(MS_EP['get-scores'],  handleGetScoreListResponse);
 
 // test getting scores by maze
 let scoreQuery = '?mazeId=10:10:KrabbyKrust'
+*/
 
+//console.log(svc.rpTest('http://www.google.com'));
+console.log('4');
+console.log('Response: ' + svc.rpTest2(EP['mazes']));
+console.log('5');
 
 /** start the work down here */
-loadMazeById('10:15:SuperSimple');
-loadMazeList();
-loadScores();
+// loadMazeById('10:15:SuperSimple');
+// loadMazeList();
+// loadScores();
 
 

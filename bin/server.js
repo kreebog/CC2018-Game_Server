@@ -72,16 +72,24 @@ function dumpArray(list, key) {
         log.trace(__filename, 'dumpArray()', JSON.stringify(item));
     });
 }
+// async function doThing(): Promise<Score> {
+//     return new Promise<Score>((resolve, reject) => {
+//         svc.doRequest
+//     });
+// }
 /*
 // test getting scores
 doRequest(MS_EP['get-scores'],  handleGetScoreListResponse);
 
 // test getting scores by maze
 let scoreQuery = '?mazeId=10:10:KrabbyKrust'
-
-
+*/
+//console.log(svc.rpTest('http://www.google.com'));
+console.log('4');
+console.log('Response: ' + svc.rpTest2(EP['mazes']));
+console.log('5');
 /** start the work down here */
-loadMazeById('10:15:SuperSimple');
-loadMazeList();
-loadScores();
+// loadMazeById('10:15:SuperSimple');
+// loadMazeList();
+// loadScores();
 //# sourceMappingURL=server.js.map
