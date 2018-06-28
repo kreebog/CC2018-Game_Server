@@ -20,7 +20,7 @@ export function doRequest(url: string, callback: Function) {
         }
         
         if (res.statusCode != 200) {
-            log.warn(__filename, 'handleMazeGetResponse()', format('Response Code %d (%s) recieved!  Discarding response.', res.statusCode, res.statusMessage));
+            log.warn(__filename, 'doRequest()', format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
             return;
         }
 

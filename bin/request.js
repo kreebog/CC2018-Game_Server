@@ -21,7 +21,7 @@ function doRequest(url, callback) {
             return err;
         }
         if (res.statusCode != 200) {
-            log.warn(__filename, 'handleMazeGetResponse()', util_1.format('Response Code %d (%s) recieved!  Discarding response.', res.statusCode, res.statusMessage));
+            log.warn(__filename, 'doRequest()', util_1.format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
             return;
         }
         // all good, apparently - fire othe callback 
