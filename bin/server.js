@@ -6,6 +6,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 require('dotenv').config();
 const consts = __importStar(require("./consts"));
@@ -13,12 +16,18 @@ const cc2018_ts_lib_1 = require("cc2018-ts-lib"); // import classes
 const util_1 = require("util");
 const Logger_1 = require("cc2018-ts-lib/dist/Logger");
 const svc = __importStar(require("./request"));
-// get singleton enums + helpers
+const express_1 = __importDefault(require("express"));
+const router_1 = __importDefault(require("./router"));
+// set module instance references
+let httpServer; // will be set with app.listen
 const enums = cc2018_ts_lib_1.Enums.getInstance();
-// get singleton logger instance
 const log = cc2018_ts_lib_1.Logger.getInstance();
-log.setLogLevel(consts.NODE_ENV == 'DVLP' ? Logger_1.LOG_LEVELS.DEBUG : Logger_1.LOG_LEVELS.INFO);
-// cache arrays
+const app = express_1.default();
+// configure modules
+log.setLogLevel(consts.NODE_ENV == 'DVLP' ? Logger_1.LOG_LEVELS.TRACE : Logger_1.LOG_LEVELS.INFO);
+app.set('views', 'views'); // using pug html rendering engine
+app.set('view engine', 'pug'); // using pug html rendering engine
+// initialize cache arrays
 let mazes = new Array(); // full mazes - added to when requested (TODO: Possible?)
 let mazeList = new Array(); // list of available mazes
 let scoreList = new Array(); // list of available scores
@@ -67,7 +76,7 @@ function getMazes() {
         log.debug(__filename, 'handleGetMazes()', util_1.format('%d maze stubs loaded into mazeList array.', mazeList.length));
         // attempt to start the service
         if (!serviceStarted)
-            doStartUp();
+            bootstrap();
     });
 }
 function getScores() {
@@ -77,7 +86,7 @@ function getScores() {
         log.debug(__filename, 'handleLoadScores()', util_1.format('%d scores loaded into scoreList array.', scoreList.length));
         // attempt to start the service
         if (!serviceStarted)
-            doStartUp();
+            bootstrap();
     });
 }
 // called on interval 
@@ -101,17 +110,37 @@ function refreshData() {
 /**
  * Kicks off the cache refresh interval once base caches are filled
  */
-function doStartUp() {
+function bootstrap() {
     if (mazeList.length > 0 && scoreList.length > 0) {
         serviceStarted = true;
         setInterval(refreshData, consts.REFRESH_TIMER); // start the data refresh
-        log.info(__filename, 'doStartUp()', util_1.format('Service starting. Cache refressing every %dms.', consts.REFRESH_TIMER));
+        log.info(__filename, 'bootstrap()', util_1.format('Service starting. Cache refressing every %dms.', consts.REFRESH_TIMER));
+        // start the express server
+        startServer();
     }
     else {
-        log.warn(__filename, 'doStartup()', util_1.format('Maze and Score lists must be populated.  mazeList Length=%d, scoreList Length=%d', mazeList.length, scoreList.length));
+        log.warn(__filename, 'bootstrap()', util_1.format('Maze and Score lists must be populated.  mazeList Length=%d, scoreList Length=%d', mazeList.length, scoreList.length));
     }
 }
 // initialize the server & cache refresh processes
 getMazes();
 getScores();
+function startServer() {
+    // create the express app reference
+    // so far so good - let's start the service
+    httpServer = app.listen(consts.GAME_SVC_PORT, function () {
+        log.info(__filename, 'startServer()', util_1.format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT));
+        // allow CORS for this application
+        app.use(function (req, res, next) {
+            log.trace(__filename, 'app.listen()', util_1.format('New request: %s', req.url));
+            res.header("Access-Control-Allow-Origin", "*");
+            res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+            // incoming request - set activity detected flag true
+            activityDetected = true;
+            // move on to the next route
+            next();
+        });
+        app.use('/*', router_1.default);
+    });
+}
 //# sourceMappingURL=server.js.map

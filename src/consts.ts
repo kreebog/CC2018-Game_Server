@@ -17,3 +17,4 @@ export const SCORE_SVC_URL = format('%s:%s', SCORE_SVC_HOST, SCORE_SVC_PORT);
 
 // other stuff
 export const REFRESH_TIMER = 5000; // milliseconds between cache refreshes (skipped in server.ts if no new activity detected)
+export const GAME_SVC_NAME = 'game-server';

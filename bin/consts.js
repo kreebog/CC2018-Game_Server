@@ -15,4 +15,5 @@ exports.MAZE_SVC_URL = util_1.format('%s:%s', exports.MAZE_SVC_HOST, exports.MAZ
 exports.SCORE_SVC_URL = util_1.format('%s:%s', exports.SCORE_SVC_HOST, exports.SCORE_SVC_PORT);
 // other stuff
 exports.REFRESH_TIMER = 5000; // milliseconds between cache refreshes (skipped in server.ts if no new activity detected)
+exports.GAME_SVC_NAME = 'game-server';
 //# sourceMappingURL=consts.js.map

@@ -4,16 +4,23 @@ import { IMazeStub, IMaze, ICell, IScore, GAME_RESULTS } from 'cc2018-ts-lib'; /
 import  {Logger, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
 import { format } from 'util';
 import { LOG_LEVELS } from 'cc2018-ts-lib/dist/Logger';
+import { Server } from 'http';
 import * as svc from './request';
+import express from 'express';
+import router from './router';
 
-// get singleton enums + helpers
+// set module instance references
+let httpServer: Server; // will be set with app.listen
 const enums = Enums.getInstance();
-
-// get singleton logger instance
 const log = Logger.getInstance();
-log.setLogLevel(consts.NODE_ENV == 'DVLP' ? LOG_LEVELS.DEBUG : LOG_LEVELS.INFO);
+const app = express();
 
-// cache arrays
+// configure modules
+log.setLogLevel(consts.NODE_ENV == 'DVLP' ? LOG_LEVELS.TRACE: LOG_LEVELS.INFO);
+app.set('views', 'views');      // using pug html rendering engine
+app.set('view engine', 'pug');  // using pug html rendering engine
+
+// initialize cache arrays
 let mazes:Array<IMaze> = new Array<IMaze>();                // full mazes - added to when requested (TODO: Possible?)
 let mazeList:Array<IMazeStub> = new Array<IMazeStub>();     // list of available mazes
 let scoreList:Array<IScore> = new Array<IScore>();          // list of available scores
@@ -67,7 +74,7 @@ function getMazes() {
         log.debug(__filename, 'handleGetMazes()', format('%d maze stubs loaded into mazeList array.', mazeList.length));
 
         // attempt to start the service
-        if (!serviceStarted) doStartUp();
+        if (!serviceStarted) bootstrap();
     });
 }
 
@@ -78,7 +85,7 @@ function getScores() {
         log.debug(__filename, 'handleLoadScores()', format('%d scores loaded into scoreList array.', scoreList.length));
 
         // attempt to start the service
-        if (!serviceStarted) doStartUp();
+        if (!serviceStarted) bootstrap();
     });
 }
 
@@ -103,13 +110,16 @@ function refreshData() {
 /**
  * Kicks off the cache refresh interval once base caches are filled
  */
-function doStartUp() {
+function bootstrap() {
     if (mazeList.length > 0 && scoreList.length > 0) {
         serviceStarted = true;
         setInterval(refreshData, consts.REFRESH_TIMER); // start the data refresh
-        log.info(__filename, 'doStartUp()', format('Service starting. Cache refressing every %dms.', consts.REFRESH_TIMER));
+        log.info(__filename, 'bootstrap()', format('Service starting. Cache refressing every %dms.', consts.REFRESH_TIMER));
+
+        // start the express server
+        startServer();
     } else {
-        log.warn(__filename, 'doStartup()', format('Maze and Score lists must be populated.  mazeList Length=%d, scoreList Length=%d', mazeList.length, scoreList.length));
+        log.warn(__filename, 'bootstrap()', format('Maze and Score lists must be populated.  mazeList Length=%d, scoreList Length=%d', mazeList.length, scoreList.length));
     }
 }
 
@@ -117,3 +127,25 @@ function doStartUp() {
 getMazes();
 getScores();
 
+function startServer() {
+    // create the express app reference
+    // so far so good - let's start the service
+    httpServer = app.listen(consts.GAME_SVC_PORT, function() {
+        log.info(__filename, 'startServer()', format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT))
+
+        // allow CORS for this application
+        app.use(function(req, res, next) {
+            log.trace(__filename, 'app.listen()', format('New request: %s', req.url));
+            res.header("Access-Control-Allow-Origin", "*");
+            res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+            // incoming request - set activity detected flag true
+            activityDetected = true; 
+
+            // move on to the next route
+            next();
+        });
+
+        app.use('/*', router);
+    });
+}
