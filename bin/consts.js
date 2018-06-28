@@ -14,6 +14,6 @@ exports.GAME_SVC_PORT = process.env.GAME_SVC_PORT || 8080;
 exports.MAZE_SVC_URL = util_1.format('%s:%s', exports.MAZE_SVC_HOST, exports.MAZE_SVC_PORT);
 exports.SCORE_SVC_URL = util_1.format('%s:%s', exports.SCORE_SVC_HOST, exports.SCORE_SVC_PORT);
 // other stuff
-exports.REFRESH_TIMER = process.env.GAME_SVC_CACHE_REFRESH || 15000; // milliseconds between cache refreshes (skipped in server.ts if no new activity detected)
+exports.CACHE_DELAY = process.env.GAME_SVC_CACHE_REFRESH || 15000; // milliseconds between cache refreshes (skipped in server.ts if no new activity detected)
 exports.GAME_SVC_NAME = 'game-server';
 //# sourceMappingURL=consts.js.map

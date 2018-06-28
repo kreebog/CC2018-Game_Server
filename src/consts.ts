@@ -16,5 +16,5 @@ export const MAZE_SVC_URL = format('%s:%s', MAZE_SVC_HOST, MAZE_SVC_PORT);
 export const SCORE_SVC_URL = format('%s:%s', SCORE_SVC_HOST, SCORE_SVC_PORT);
 
 // other stuff
-export const REFRESH_TIMER = process.env.GAME_SVC_CACHE_REFRESH || 15000; // milliseconds between cache refreshes (skipped in server.ts if no new activity detected)
+export const CACHE_DELAY = process.env.GAME_SVC_CACHE_REFRESH || 15000; // milliseconds between cache refreshes (skipped in server.ts if no new activity detected)
 export const GAME_SVC_NAME = 'game-server';

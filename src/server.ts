@@ -8,6 +8,7 @@ import { Server } from 'http';
 import * as svc from './request';
 import express from 'express';
 import router from './router';
+import { start } from 'repl';
 
 // set module instance references
 let httpServer: Server; // will be set with app.listen
@@ -27,7 +28,6 @@ let scoreList:Array<IScore> = new Array<IScore>();          // list of available
 
 // activity tracking vars
 let serviceStarted: boolean = false;  // set true when startup() completes successfully
-let activityDetected: boolean = true; // set true on new request, set false by refreshData()
 let lastMazeListFill: number = 0;     // updated by Date.now() after cache request fulfillment 
 let lastScoreListFill: number = 0;    // updated by Date.now() after cache request fulfillment 
 
@@ -64,21 +64,22 @@ function loadMazeById(mazeId: string) {
     });
 }
 
-/**
- * Gets the list of available mazes and stores it locally
- */
-function getMazes() {
+// Pull the list of available mazes from the maze-service
+// cache it locally.  Refreshses as part of the incoming request
+// process if consts.CACHE_DELAY is exceeded 
+function updateMazesCache() {
     svc.doRequest(EP['mazes'], function handleGetMazes(res: Response, body:any) {
         mazeList = JSON.parse(body);
         // dumpArray(mazeList, 'id');
         log.debug(__filename, 'handleGetMazes()', format('%d maze stubs loaded into mazeList array.', mazeList.length));
 
         // attempt to start the service
-        if (!serviceStarted) bootstrap();
+        if (!serviceStarted && mazeList.length > 0 && scoreList.length > 0) startServer();
     });
 }
 
-function getScores() {
+// Same as updateMazesCache, but with scores
+function udpateScoresCache() {
     svc.doRequest(EP['scores'], function handleLoadScores(res: Response, body:any) {
         scoreList = JSON.parse(body);
         // dumpArray(scoreList, 'scoreKey');
@@ -89,49 +90,27 @@ function getScores() {
     });
 }
 
-// called on interval 
-function refreshData() {
-    // refresh cache only if...
-    // ... there's been a request since the last refresh
-    if (activityDetected) {
-        // reset the request activity flag - there is a chance of inaccuracy here, 
-        // but shouldn't have much of an impact
-        activityDetected = false;
-
-        // ... and the cache is potentially stale
-        if (lastMazeListFill < Date.now()) getMazes();
-        if (lastScoreListFill < Date.now()) getScores();
-    } else {
-        log.debug(__filename, 'refreshData()', 'No recent activity detected, cache refresh cycle skipped.');
-    }
-
-}
-
 /**
  * Kicks off the cache refresh interval once base caches are filled
  */
 function bootstrap() {
     if (mazeList.length > 0 && scoreList.length > 0) {
-        serviceStarted = true;
-        setInterval(refreshData, consts.REFRESH_TIMER); // start the data refresh
-        log.info(__filename, 'bootstrap()', format('Service starting. Cache refressing every %dms.', consts.REFRESH_TIMER));
-
-        // start the express server
-        startServer();
+        startServer(); // start the express server
     } else {
         log.warn(__filename, 'bootstrap()', format('Maze and Score lists must be populated.  mazeList Length=%d, scoreList Length=%d', mazeList.length, scoreList.length));
     }
 }
 
 // initialize the server & cache refresh processes
-getMazes();
-getScores();
+updateMazesCache();
+udpateScoresCache();
 
 function startServer() {
-    // create the express app reference
-    // so far so good - let's start the service
+    // open the service port
     httpServer = app.listen(consts.GAME_SVC_PORT, function() {
         log.info(__filename, 'startServer()', format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT))
+
+        serviceStarted = true;
 
         // allow CORS for this application
         app.use(function(req, res, next) {
@@ -139,13 +118,47 @@ function startServer() {
             res.header("Access-Control-Allow-Origin", "*");
             res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 
-            // incoming request - set activity detected flag true
-            activityDetected = true; 
-
+            // check for cache update needs
+            if (Date.now() - lastMazeListFill > consts.CACHE_DELAY) { 
+                log.info(__filename, 'startServer()', format('mazeList cache expired - calling refresh.'));
+                updateMazesCache();
+            }
+            
+            if (Date.now() - lastScoreListFill > consts.CACHE_DELAY) {
+                log.info(__filename, 'startServer()', format('scoreList cache expired - calling refresh.'));
+                udpateScoresCache();
+            }
+        
             // move on to the next route
             next();
         });
 
         app.use('/*', router);
     });
+}
+
+/**
+ * Watch for SIGINT (process interrupt signal) and trigger shutdown
+ */
+process.on('SIGINT', function onSigInt () {
+    // all done, close the db connection
+    log.info(__filename, 'onSigInt()', 'Got SIGINT - Exiting applicaton...');
+    doShutdown()
+  });
+
+/**
+ * Watch for SIGTERM (process terminate signal) and trigger shutdown
+ */
+process.on('SIGTERM', function onSigTerm () {
+    // all done, close the db connection
+    log.info(__filename, 'onSigTerm()', 'Got SIGTERM - Exiting applicaton...');
+    doShutdown()
+  });
+
+/**
+ * Gracefully shut down the service
+ */
+function doShutdown() {
+    log.info(__filename, 'doShutDown()', 'Closing HTTP Server connections...');
+    httpServer.close();
 }
