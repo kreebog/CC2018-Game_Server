@@ -8,7 +8,6 @@ import { Server } from 'http';
 import * as svc from './request';
 import express from 'express';
 import router from './router';
-import { start } from 'repl';
 
 // set module instance references
 let httpServer: Server; // will be set with app.listen
