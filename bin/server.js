@@ -31,6 +31,9 @@ app.set('view engine', 'pug'); // using pug html rendering engine
 let mazes = new Array(); // full mazes - added to when requested (TODO: Possible?)
 let mazeList = new Array(); // list of available mazes
 let scoreList = new Array(); // list of available scores
+// initialize team and game tracking arrays
+let teams = new Array();
+let games = new Array();
 // activity tracking vars
 let serviceStarted = false; // set true when startup() completes successfully
 let lastMazeListFill = 0; // updated by Date.now() after cache request fulfillment 

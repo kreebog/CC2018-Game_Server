@@ -1,7 +1,8 @@
 require('dotenv').config();
 import * as consts from './consts';
 import { IMazeStub, IMaze, ICell, IScore, GAME_RESULTS } from 'cc2018-ts-lib'; // import class interfaces
-import  {Logger, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
+import { Logger, Team, Bot, Game, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
+
 import { format } from 'util';
 import { LOG_LEVELS } from 'cc2018-ts-lib/dist/Logger';
 import { Server } from 'http';
@@ -16,14 +17,18 @@ const log = Logger.getInstance();
 const app = express();
 
 // configure modules
-log.setLogLevel(consts.NODE_ENV == 'DVLP' ? LOG_LEVELS.TRACE: LOG_LEVELS.INFO);
+log.setLogLevel(consts.NODE_ENV == 'DVLP' ? LOG_LEVELS.TRACE : LOG_LEVELS.INFO);
 app.set('views', 'views');      // using pug html rendering engine
 app.set('view engine', 'pug');  // using pug html rendering engine
 
 // initialize cache arrays
-let mazes:Array<IMaze> = new Array<IMaze>();                // full mazes - added to when requested (TODO: Possible?)
-let mazeList:Array<IMazeStub> = new Array<IMazeStub>();     // list of available mazes
-let scoreList:Array<IScore> = new Array<IScore>();          // list of available scores
+let mazes: Array<IMaze> = new Array<IMaze>();                // full mazes - added to when requested (TODO: Possible?)
+let mazeList: Array<IMazeStub> = new Array<IMazeStub>();     // list of available mazes
+let scoreList: Array<IScore> = new Array<IScore>();          // list of available scores
+
+// initialize team and game tracking arrays
+let teams: Array<Team> = new Array<Team>();
+let games: Array<Game> = new Array<Game>();
 
 // activity tracking vars
 let serviceStarted: boolean = false;  // set true when startup() completes successfully
@@ -35,7 +40,7 @@ const EP = {
     'mazes': format('%s/%s', consts.MAZE_SVC_URL, 'get'),
     'mazeById': format('%s/%s', consts.MAZE_SVC_URL, 'get/:mazeId'),
     'scores': format('%s/%s', consts.SCORE_SVC_URL, 'get'),
-} 
+}
 
 /**
  * Useful debug tool - dumps key/val array to debug/trace logs
@@ -43,7 +48,7 @@ const EP = {
  * @param list 
  * @param key 
  */
-function dumpArray(list:Array<any>, key: string) {
+function dumpArray(list: Array<any>, key: string) {
     list.forEach(item => {
         log.debug(__filename, 'dumpArray()', format('%s=%s', key, item[key]));
         log.trace(__filename, 'dumpArray()', JSON.stringify(item));
@@ -56,7 +61,7 @@ function dumpArray(list:Array<any>, key: string) {
  * @param mazeId 
  */
 function loadMazeById(mazeId: string) {
-    svc.doRequest(EP['mazeById'].replace(':mazeId', '10:15:SimpleSample'), function handleGetMaze(res: Response, body:any) {
+    svc.doRequest(EP['mazeById'].replace(':mazeId', '10:15:SimpleSample'), function handleGetMaze(res: Response, body: any) {
         let maze: IMaze = JSON.parse(body); // this assignment is not totally necessary, but helps debug logging
         mazes.push(maze);
         log.debug(__filename, 'handleGetMaze()', format('Maze %s loaded. \n%s', maze.id, maze.textRender));
@@ -67,7 +72,7 @@ function loadMazeById(mazeId: string) {
 // cache it locally.  Refreshses as part of the incoming request
 // process if consts.CACHE_DELAY is exceeded 
 function updateMazesCache() {
-    svc.doRequest(EP['mazes'], function handleGetMazes(res: Response, body:any) {
+    svc.doRequest(EP['mazes'], function handleGetMazes(res: Response, body: any) {
         mazeList = JSON.parse(body);
         // dumpArray(mazeList, 'id');
         log.debug(__filename, 'handleGetMazes()', format('%d maze stubs loaded into mazeList array.', mazeList.length));
@@ -79,7 +84,7 @@ function updateMazesCache() {
 
 // Same as updateMazesCache, but with scores
 function udpateScoresCache() {
-    svc.doRequest(EP['scores'], function handleLoadScores(res: Response, body:any) {
+    svc.doRequest(EP['scores'], function handleLoadScores(res: Response, body: any) {
         scoreList = JSON.parse(body);
         // dumpArray(scoreList, 'scoreKey');
         log.debug(__filename, 'handleLoadScores()', format('%d scores loaded into scoreList array.', scoreList.length));
@@ -106,28 +111,28 @@ udpateScoresCache();
 
 function startServer() {
     // open the service port
-    httpServer = app.listen(consts.GAME_SVC_PORT, function() {
+    httpServer = app.listen(consts.GAME_SVC_PORT, function () {
         log.info(__filename, 'startServer()', format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT))
 
         serviceStarted = true;
 
         // allow CORS for this application
-        app.use(function(req, res, next) {
+        app.use(function (req, res, next) {
             log.trace(__filename, 'app.listen()', format('New request: %s', req.url));
             res.header("Access-Control-Allow-Origin", "*");
             res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 
             // check for cache update needs
-            if (Date.now() - lastMazeListFill > consts.CACHE_DELAY) { 
+            if (Date.now() - lastMazeListFill > consts.CACHE_DELAY) {
                 log.info(__filename, 'startServer()', format('mazeList cache expired - calling refresh.'));
                 updateMazesCache();
             }
-            
+
             if (Date.now() - lastScoreListFill > consts.CACHE_DELAY) {
                 log.info(__filename, 'startServer()', format('scoreList cache expired - calling refresh.'));
                 udpateScoresCache();
             }
-        
+
             // move on to the next route
             next();
         });
@@ -139,20 +144,20 @@ function startServer() {
 /**
  * Watch for SIGINT (process interrupt signal) and trigger shutdown
  */
-process.on('SIGINT', function onSigInt () {
+process.on('SIGINT', function onSigInt() {
     // all done, close the db connection
     log.info(__filename, 'onSigInt()', 'Got SIGINT - Exiting applicaton...');
     doShutdown()
-  });
+});
 
 /**
  * Watch for SIGTERM (process terminate signal) and trigger shutdown
  */
-process.on('SIGTERM', function onSigTerm () {
+process.on('SIGTERM', function onSigTerm() {
     // all done, close the db connection
     log.info(__filename, 'onSigTerm()', 'Got SIGTERM - Exiting applicaton...');
     doShutdown()
-  });
+});
 
 /**
  * Gracefully shut down the service
