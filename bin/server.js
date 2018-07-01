@@ -62,11 +62,23 @@ function dumpArray(list, key) {
  * @param mazeId
  */
 function loadMazeById(mazeId) {
-    svc.doRequest(EP['mazeById'].replace(':mazeId', '10:15:SimpleSample'), function handleGetMaze(res, body) {
-        let maze = JSON.parse(body); // this assignment is not totally necessary, but helps debug logging
-        mazes.push(maze);
-        log.debug(__filename, 'handleGetMaze()', util_1.format('Maze %s loaded. \n%s', maze.id, maze.textRender));
-    });
+    if (mazeLoaded(mazeId)) {
+        log.debug(__filename, 'loadMazeById()', util_1.format('Maze [%s] already loaded, skipping.', mazeId));
+    }
+    else {
+        svc.doRequest(EP['mazeById'].replace(':mazeId', mazeId), function handleGetMaze(res, body) {
+            let maze = JSON.parse(body); // this assignment is not totally necessary, but helps debug logging
+            mazes.push(maze);
+            log.debug(__filename, 'handleGetMaze()', util_1.format('Maze %s loaded.', maze.id));
+        });
+    }
+}
+function mazeLoaded(mazeId) {
+    for (let n = 0; n < mazes.length; n++) {
+        if (mazes[n].id == mazeId)
+            return true;
+    }
+    return false;
 }
 // Pull the list of available mazes from the maze-service
 // cache it locally.  Refreshses as part of the incoming request
@@ -76,9 +88,13 @@ function updateMazesCache() {
         mazeList = JSON.parse(body);
         // dumpArray(mazeList, 'id');
         log.debug(__filename, 'handleGetMazes()', util_1.format('%d maze stubs loaded into mazeList array.', mazeList.length));
+        // populate the mazes list
+        mazeList.forEach(mazeStub => {
+            loadMazeById(mazeStub.id);
+        });
         // attempt to start the service
-        if (!serviceStarted && mazeList.length > 0 && scoreList.length > 0)
-            startServer();
+        if (!serviceStarted)
+            bootstrap();
     });
 }
 // Same as updateMazesCache, but with scores
@@ -103,6 +119,32 @@ function bootstrap() {
         log.warn(__filename, 'bootstrap()', util_1.format('Maze and Score lists must be populated.  mazeList Length=%d, scoreList Length=%d', mazeList.length, scoreList.length));
     }
 }
+/**
+ * Find and return the game with the matching ID
+ *
+ * @param gameId
+ */
+function findGame(gameId) {
+    games.forEach(game => {
+        if (game.getId() == gameId) {
+            return game;
+        }
+    });
+    throw new Error('Game Not Found');
+}
+/**
+ * Find and return the maze with the matching ID
+ *
+ * @param mazeId
+ */
+function findMaze(mazeId) {
+    for (let n = 0; n < mazes.length; n++) {
+        if (mazes[n].id == mazeId) {
+            return mazes[n];
+        }
+    }
+    throw new Error(util_1.format('Maze [%s] not found.', mazeId));
+}
 // initialize the server & cache refresh processes
 updateMazesCache();
 udpateScoresCache();
@@ -119,14 +161,44 @@ function startServer() {
             // check for cache update needs
             if (Date.now() - lastMazeListFill > consts.CACHE_DELAY) {
                 log.info(__filename, 'startServer()', util_1.format('mazeList cache expired - calling refresh.'));
+                lastMazeListFill = Date.now();
                 updateMazesCache();
             }
             if (Date.now() - lastScoreListFill > consts.CACHE_DELAY) {
                 log.info(__filename, 'startServer()', util_1.format('scoreList cache expired - calling refresh.'));
+                lastScoreListFill = Date.now();
                 udpateScoresCache();
             }
             // move on to the next route
             next();
+        });
+        // send list of available games
+        app.get('/games', function (req, res) {
+            res.status(200).json(games);
+        });
+        app.get('/game/:gameId', function (req, res) {
+            // find game in games array
+            let gameId = req.params.gameId;
+            let game;
+            try {
+                game = findGame(gameId);
+                res.status(200).json(game);
+            }
+            catch (_a) {
+                res.status(404).json({ "status": util_1.format('Game [%s] not found.', gameId) });
+            }
+        });
+        app.get('/game/new/:mazeId/:teamId', function (req, res) {
+            try {
+                // create and return a new game against the given maze
+                let maze = findMaze(req.params.mazeId);
+                let game = new cc2018_ts_lib_1.Game(maze, team, new cc2018_ts_lib_1.Score());
+                games.push(game);
+                res.status(200).json(game);
+            }
+            catch (err) {
+                res.status(404).json({ "status": util_1.format('Error creating game: %s', JSON.stringify(err)) });
+            }
         });
         app.use('/*', router_1.default);
     });
