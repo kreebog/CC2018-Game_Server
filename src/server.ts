@@ -249,7 +249,14 @@ function startServer() {
             } else {
                 let data = new Array();
                 for (let n = 0; n < games.length; n++) {
-                    data.push({'id':games[n].getId(), 'teamId': games[n].getTeam().getTeamId, 'gameState': games[n].getState()});
+                    data.push({
+                        'id':games[n].getId(), 
+                        'teamId':games[n].getTeam().getTeamId(), 
+                        'teamName':games[n].getTeam().getTeamName(), 
+                        'gameState':games[n].getState(),
+                        'moveCount':games[n].getScore().MoveCount,
+                        'url':format('http://%s%s/%s', req.host, req.url, games[n].getId())
+                    });
                 }
 
                 res.status(200).json(data);
@@ -262,12 +269,13 @@ function startServer() {
                 let teamId = parseInt(req.params.teamId);
                 let maze: IMaze = findMaze(req.params.mazeId);
                 let score: Score = new Score();
-                let team: any = findTeam(teamId);
+                let teamStub: ITeam = findTeam(teamId);
+                let team: Team = new Team(teamStub.name, teamStub.id, teamStub.members);
 
                 if (team) {
                     let game: Game = new Game(maze, team, score);
                     games.push(game);
-                    log.info(__filename, req.url, 'New game added to games list: ' + JSON.stringify(game))
+                    log.info(__filename, req.url, 'New game added to games list: ' + game.getId());
                     res.status(200).json(game);
                 } else {
                     log.error(__filename, req.url, 'Unable to add new game. Invalid teamId: ' + teamId);
