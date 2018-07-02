@@ -226,7 +226,11 @@ function startServer() {
                 res.status(200).json({ 'status': 'No active games found.' });
             }
             else {
-                res.status(200).json(games);
+                let data = new Array();
+                for (let n = 0; n < games.length; n++) {
+                    data.push({ 'id': games[n].getId(), 'teamId': games[n].getTeam().getTeamId, 'gameState': games[n].getState() });
+                }
+                res.status(200).json(data);
             }
         });
         app.get('/game/new/:mazeId/:teamId', function (req, res) {
