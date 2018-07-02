@@ -19,7 +19,7 @@ html
             th Description
             tr
                 td Get
-                td API
+                td Get
                 td HTML 
                 td(class='td-left') N/A
                 td(class='td-left') API Documentation
@@ -27,3 +27,23 @@ html
                     a(href= 'http://' + host) Sample Link
                 td Current
                 td(class='td-left') Returns this document.
+            tr
+                td Get
+                td Get
+                td JSON 
+                td(class='td-left') N/A
+                td(class='td-left') List of active games.
+                td(class='td-left')
+                    a(href= 'http://' + host + '/get') Sample Link
+                td Current
+                td(class='td-left') Returns a list of currently active games.
+            tr
+                td Get
+                td Get
+                td JSON 
+                td(class='td-left') GameId (GUID)
+                td(class='td-left') A single game object as JSON.
+                td(class='td-left')
+                    a(href= 'http://' + host + '/get/12312123123') Sample Link
+                td Current
+                td(class='td-left') Returns an active game with the matching GameID GUID. 

@@ -227,12 +227,7 @@ function startServer() {
             next();
         });
 
-        // send list of available games
-        app.get('/games', function (req, res) {
-            res.status(200).json(games);
-        });
-
-        app.get('/game/:gameId', function (req, res) {
+        app.get('/get/:gameId', function (req, res) {
             // find game in games array
             let gameId = req.params.gameId;
             let game: Game;
@@ -242,6 +237,17 @@ function startServer() {
                 res.status(200).json(game);
             } catch {
                 res.status(404).json({"status":format('Game [%s] not found.', gameId)});
+            }
+        });
+
+        // send list of available games
+        app.get('/get', function (req, res) {
+            log.debug(__filename, req.url, 'Returning list of active games.');
+
+            if (games.length == 0) {
+                res.status(200).json({'status':'No active games found.'});
+            } else {
+                res.status(200).json(games);
             }
         });
 
