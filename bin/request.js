@@ -15,6 +15,7 @@ const log = cc2018_ts_lib_1.Logger.getInstance();
  * @param callback - Callback to send response data to
  */
 function doRequest(url, callback) {
+    log.trace(__filename, 'doRequest()', util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
     request_1.default(url, (err, res, body) => {
         if (err) {
             log.error(__filename, 'doRequest()', util_1.format('Error from %s \n::ERROR INFO:: %s', url, JSON.stringify(err)));

@@ -13,6 +13,8 @@ const log = Logger.getInstance();
  * @param callback - Callback to send response data to
  */
 export function doRequest(url: string, callback: Function) {
+    log.trace(__filename, 'doRequest()', format('Requesting [%s] with callback to [%s]', url, callback.name));
+
     request(url, (err, res, body) => {
         if (err) {
             log.error(__filename, 'doRequest()', format('Error from %s \n::ERROR INFO:: %s', url, JSON.stringify(err)));

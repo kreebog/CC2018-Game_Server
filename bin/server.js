@@ -38,11 +38,13 @@ let games = new Array();
 let serviceStarted = false; // set true when startup() completes successfully
 let lastMazeListFill = 0; // updated by Date.now() after cache request fulfillment 
 let lastScoreListFill = 0; // updated by Date.now() after cache request fulfillment 
+let lastTeamListFill = 0; // updated by Date.now() after cache request fulfillment 
 // Service End Points
 const EP = {
     'mazes': util_1.format('%s/%s', consts.MAZE_SVC_URL, 'get'),
     'mazeById': util_1.format('%s/%s', consts.MAZE_SVC_URL, 'get/:mazeId'),
     'scores': util_1.format('%s/%s', consts.SCORE_SVC_URL, 'get'),
+    'teams': util_1.format('%s/%s', consts.TEAM_SVC_URL, 'get'),
 };
 /**
  * Useful debug tool - dumps key/val array to debug/trace logs
@@ -97,6 +99,17 @@ function updateMazesCache() {
             bootstrap();
     });
 }
+// Same as updateMazesCache, but with teams
+function updateTeamsCache() {
+    svc.doRequest(EP['teams'], function handleLoadScores(res, body) {
+        teams = JSON.parse(body);
+        // dumpArray(scoreList, 'scoreKey');
+        log.debug(__filename, 'handleLoadScores()', util_1.format('%d teams loaded into scoreList array.', scoreList.length));
+        // attempt to start the service
+        if (!serviceStarted)
+            bootstrap();
+    });
+}
 // Same as updateMazesCache, but with scores
 function udpateScoresCache() {
     svc.doRequest(EP['scores'], function handleLoadScores(res, body) {
@@ -112,11 +125,11 @@ function udpateScoresCache() {
  * Kicks off the cache refresh interval once base caches are filled
  */
 function bootstrap() {
-    if (mazeList.length > 0 && scoreList.length > 0) {
+    if (mazeList.length > 0 && scoreList.length > 0 && teams.length > 0) {
         startServer(); // start the express server
     }
     else {
-        log.warn(__filename, 'bootstrap()', util_1.format('Maze and Score lists must be populated.  mazeList Length=%d, scoreList Length=%d', mazeList.length, scoreList.length));
+        log.warn(__filename, 'bootstrap()', util_1.format('Maze, Score, and Team lists must be populated.  mazeList Length=%d, scoreList Length=%d', mazeList.length, scoreList.length));
     }
 }
 /**
@@ -125,12 +138,27 @@ function bootstrap() {
  * @param gameId
  */
 function findGame(gameId) {
-    games.forEach(game => {
-        if (game.getId() == gameId) {
-            return game;
+    for (let n = 0; n < games.length; n++) {
+        if (games[n].getId() == gameId) {
+            return games[n];
         }
-    });
-    throw new Error('Game Not Found');
+    }
+    log.warn(__filename, 'findGame()', 'Maze not found: ' + gameId);
+    throw new Error('Game Not Found: ' + gameId);
+}
+/**
+ * Find and return the team with the matching ID
+ *
+ * @param teamId
+ */
+function findTeam(teamId) {
+    for (let n = 0; n < teams.length; n++) {
+        if (teams[n].id == teamId) {
+            return teams[n];
+        }
+    }
+    log.warn(__filename, 'findTeam()', 'Team not found: ' + teamId);
+    throw new Error('Team Not Found: ' + teamId);
 }
 /**
  * Find and return the maze with the matching ID
@@ -143,11 +171,13 @@ function findMaze(mazeId) {
             return mazes[n];
         }
     }
-    throw new Error(util_1.format('Maze [%s] not found.', mazeId));
+    log.warn(__filename, 'findMaze()', 'Maze not found: ' + mazeId);
+    throw new Error('Maze not found: ' + mazeId);
 }
 // initialize the server & cache refresh processes
 updateMazesCache();
 udpateScoresCache();
+updateTeamsCache();
 function startServer() {
     // open the service port
     httpServer = app.listen(consts.GAME_SVC_PORT, function () {
@@ -168,6 +198,11 @@ function startServer() {
                 log.info(__filename, 'startServer()', util_1.format('scoreList cache expired - calling refresh.'));
                 lastScoreListFill = Date.now();
                 udpateScoresCache();
+            }
+            if (Date.now() - lastTeamListFill > consts.CACHE_DELAY) {
+                log.info(__filename, 'startServer()', util_1.format('teams cache expired - calling refresh.'));
+                lastTeamListFill = Date.now();
+                updateTeamsCache();
             }
             // move on to the next route
             next();
@@ -191,12 +226,24 @@ function startServer() {
         app.get('/game/new/:mazeId/:teamId', function (req, res) {
             try {
                 // create and return a new game against the given maze
+                let teamId = parseInt(req.params.teamId);
                 let maze = findMaze(req.params.mazeId);
-                let game = new cc2018_ts_lib_1.Game(maze, team, new cc2018_ts_lib_1.Score());
-                games.push(game);
-                res.status(200).json(game);
+                let score = new cc2018_ts_lib_1.Score();
+                let team = findTeam(teamId);
+                if (team) {
+                    let game = new cc2018_ts_lib_1.Game(maze, team, score);
+                    games.push(game);
+                    log.info(__filename, req.url, 'New game added to games list: ' + JSON.stringify(game));
+                    res.status(200).json(game);
+                }
+                else {
+                    log.error(__filename, req.url, 'Unable to add new game. Invalid teamId: ' + teamId);
+                    res.status(500).json({ "status": util_1.format('Invalid teamId: %s', teamId) });
+                }
+                //let game: Game = new Game(maze, team, new Score());
             }
             catch (err) {
+                log.error(__filename, req.url, 'Error while adding game: ' + JSON.stringify(err));
                 res.status(404).json({ "status": util_1.format('Error creating game: %s', JSON.stringify(err)) });
             }
         });
