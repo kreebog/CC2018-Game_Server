@@ -1,22 +1,18 @@
 doctype html
 html
-    head
-        style
-            include style.css
-        title Game Server - API Documentation
-    body
+    include head.pug
+    div(class='container text-center')
         h1 Game Server - API Documentation
-        hr
         br
-        table
-            th Link
-            th Action
-            th Type
-            th Arguments
-            th Return
-            th Method
-            th Status
-            th Description
+        table(class='table table-striped table-dark table-hover' style='color:antiquewhite')
+            th(scope='col') Link
+            th(scope='col') Action
+            th(scope='col') Type
+            th(scope='col') Arguments
+            th(scope='col') Return
+            th(scope='col') Method
+            th(scope='col') Status
+            th(scope='col') Description
             tr
                 td(class='td-left')
                     a(href= 'http://' + host) This Page
@@ -29,7 +25,7 @@ html
                 td(class='td-left') Returns this document.
             tr
                 td(class='td-left')
-                    a(href= 'http://' + host + '/game/get') List Games
+                    a(href= 'http://' + host + '/games') List Games
                 td Get
                 td Get
                 td JSON 
@@ -39,7 +35,7 @@ html
                 td(class='td-left') Returns a list of currently active games.
             tr
                 td(class='td-left')
-                    a(href= 'http://' + host + '/game/get/625a0dbb-011d-4eb2-98f9-9c5a6775ad89') Get Game
+                    a(href= 'http://' + host + '/game/625a0dbb-011d-4eb2-98f9-9c5a6775ad89') Get Game
                 td Get
                 td Get
                 td JSON 
@@ -57,3 +53,44 @@ html
                 td(class='td-left') Game Data
                 td Current
                 td(class='td-left') Returns the game data for a new game session, or redirects to /get/GameID if team already has a game underway
+            tr
+                td(class='td-left')
+                    a(href= 'http://' + host + '/mazes') List Mazes
+                td Get
+                td Get
+                td JSON 
+                td(class='td-left') N/A
+                td(class='td-left') List of Mazes
+                td Current
+                td(class='td-left') Returns the list of Mazes (stubbed data) available on the server 
+            tr
+                td(class='td-left')
+                    a(href= 'http://' + host + '/maze/10:15:SimpleSample') Get Maze
+                td Get
+                td Get
+                td JSON 
+                td(class='td-left') MazeId (H:W:Seed)
+                td(class='td-left') Maze Data
+                td Current
+                td(class='td-left') Returns the maze data for a single maze with the given MazeId
+            tr
+                td(class='td-left')
+                    a(href= 'http://' + host + '/teams') Get Teams
+                td Get
+                td Get
+                td JSON 
+                td(class='td-left') N/A
+                td(class='td-left') List of Teams
+                td Current
+                td(class='td-left') Returns all Teams
+            tr
+                td(class='td-left')
+                    a(href= 'http://' + host + '/scores') Get Scores
+                td Get
+                td Get
+                td JSON 
+                td(class='td-left') N/A
+                td(class='td-left') List of Scores
+                td Current
+                td(class='td-left') Returns all Scores
+    include foot.pug

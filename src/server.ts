@@ -1,15 +1,14 @@
 require('dotenv').config();
+import path from 'path';
 import * as consts from './consts';
 import { IMazeStub, IMaze, ICell, IScore, ITeam } from 'cc2018-ts-lib'; // import class interfaces
 import { Logger, Team, Bot, Game, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
 import { DIRS, GAME_RESULTS, GAME_STATES, ACTIONS, TAGS } from 'cc2018-ts-lib'; // import classes
 
 import { format } from 'util';
-import { LOG_LEVELS } from 'cc2018-ts-lib/dist/Logger';
 import { Server } from 'http';
 import * as svc from './request';
 import express from 'express';
-import router from './router';
 
 // set module instance references
 let httpServer: Server; // will be set with app.listen
@@ -75,6 +74,10 @@ function loadMazeById(mazeId: string) {
     }
 }
 
+/**
+ * Quick scan of mazes array to determine if the maze is already cached
+ * @param mazeId
+ */
 function mazeLoaded(mazeId: string): boolean {
     for (let n = 0; n < mazes.length; n++) {
         if (mazes[n].id == mazeId) return true;
@@ -94,6 +97,7 @@ function updateMazesCache() {
         // populate the mazes list
         mazeList.forEach(mazeStub => {
             loadMazeById(mazeStub.id);
+            mazeStub.url = format('%s/maze/%d:%d:%s', consts.GAME_SVC_URL, mazeStub.height, mazeStub.width, mazeStub.seed);
         });
 
         // attempt to start the service
@@ -130,28 +134,10 @@ function udpateScoresCache() {
  */
 function bootstrap() {
     if (mazeList.length > 0 && scoreList.length > 0 && teams.length > 0) {
-        log.debug(
-            __filename,
-            'bootstrap()',
-            format(
-                'Caches populated, starting server.  mazeList:%d, scoreList:%d, teams:%d',
-                mazeList.length,
-                scoreList.length,
-                teams.length
-            )
-        );
+        log.debug(__filename, 'bootstrap()', format('Caches populated, starting server.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
         startServer(); // start the express server
     } else {
-        log.warn(
-            __filename,
-            'bootstrap()',
-            format(
-                'Maze, Score, and Team lists must be populated.  mazeList:%d, scoreList:%d, teams:%d',
-                mazeList.length,
-                scoreList.length,
-                teams.length
-            )
-        );
+        log.warn(__filename, 'bootstrap()', format('Maze, Score, and Team lists must be populated.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
     }
 }
 
@@ -228,11 +214,7 @@ updateTeamsCache();
 function startServer() {
     // open the service port
     httpServer = app.listen(consts.GAME_SVC_PORT, function() {
-        log.info(
-            __filename,
-            'startServer()',
-            format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT)
-        );
+        log.info(__filename, 'startServer()', format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT));
 
         serviceStarted = true;
 
@@ -274,7 +256,11 @@ function startServer() {
             next();
         });
 
-        app.get('/game/get/:gameId', function(req, res) {
+        app.get('/favicon.ico', (req, res) => {
+            res.status(200).sendFile(path.resolve('/views/favicon.ico'));
+        });
+
+        app.get('/game/:gameId', function(req, res) {
             // find game in games array
             let gameId = req.params.gameId;
             let game: Game;
@@ -290,7 +276,7 @@ function startServer() {
         /**
          * Sends JSON list of all current games with url to full /get/GameId link
          */
-        app.get('/game/get', function(req, res) {
+        app.get('/games', function(req, res) {
             log.debug(__filename, req.url, 'Returning list of active games.');
 
             if (games.length == 0) {
@@ -324,11 +310,7 @@ function startServer() {
                 let gameId = findGameInProgress(teamId);
 
                 if (gameId != '') {
-                    log.debug(
-                        __filename,
-                        req.url,
-                        format('Redirecting to /get/gameId - Team %d already in game %s.', teamId, gameId)
-                    );
+                    log.debug(__filename, req.url, format('Redirecting to /get/gameId - Team %d already in game %s.', teamId, gameId));
                     return res.redirect('/get/' + gameId);
                 }
 
@@ -358,9 +340,7 @@ function startServer() {
         app.get('/game/action/move/:gameId/:direction', function(req, res) {
             try {
                 if (req.params.gameId === undefined || req.params.direction === undefined) {
-                    return res
-                        .status(400)
-                        .json({ status: 'Missing argument(s).  Format=/game/action/move/<GameID>/<Direction>' });
+                    return res.status(400).json({ status: 'Missing argument(s).  Format=/game/action/move/<GameID>/<Direction>' });
                 }
 
                 let gameId = req.params.gameId;
@@ -368,12 +348,7 @@ function startServer() {
 
                 let dir: number = parseInt(DIRS[argDir]); // value will be NaN if not a valid direction name
                 if (isNaN(dir)) {
-                    throw new Error(
-                        format(
-                            'Invalid Direction: %s.  Valid directions are NONE, NORTH, SOUTH, EAST, and WEST',
-                            req.params.direction
-                        )
-                    );
+                    throw new Error(format('Invalid Direction: %s.  Valid directions are NONE, NORTH, SOUTH, EAST, and WEST', req.params.direction));
                 }
 
                 let game: Game = findGame(gameId); // will throw error if game not found - drops to catch block
@@ -397,8 +372,7 @@ function startServer() {
                 // make sure we have the right arguments
                 if (req.query.act === undefined || req.query.gameId === undefined) {
                     return res.status(400).json({
-                        status:
-                            'Missing querystring argument(s). Format=?act=[move|look|jump|write|say][&dir=<none|north|south|east|west>][&message=text]'
+                        status: 'Missing querystring argument(s). Format=?act=[move|look|jump|write|say][&dir=<none|north|south|east|west>][&message=text]'
                     });
                 }
 
@@ -422,16 +396,10 @@ function startServer() {
 
                         break;
                     case 'LOOK':
-                        if (isNaN(dir))
-                            return res
-                                .status(400)
-                                .json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
+                        if (isNaN(dir)) return res.status(400).json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
                         break;
                     case 'JUMP':
-                        if (isNaN(dir))
-                            return res
-                                .status(400)
-                                .json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
+                        if (isNaN(dir)) return res.status(400).json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
                         break;
                     case 'WRITE':
                         break;
@@ -440,10 +408,7 @@ function startServer() {
                     default:
                         log.warn(__filename, req.url, 'Invalid Action: ' + argAct);
                         return res.status(400).json({
-                            status: format(
-                                'Invalid action: %s.  Expected act=[ MOVE | LOOK | JUMP | WRITE | SAY ]',
-                                argAct
-                            )
+                            status: format('Invalid action: %s.  Expected act=[ MOVE | LOOK | JUMP | WRITE | SAY ]', argAct)
                         });
                 }
             } catch (err) {
@@ -454,7 +419,54 @@ function startServer() {
             res.status(200).json({ status: 'ok' });
         });
 
-        app.use('/*', router);
+        /** MAZE ROUTES **/
+        app.get('/mazes', (req, res) => {
+            log.trace(__filename, req.url, 'Sending list of mazes.');
+            res.status(200).json(mazeList);
+        });
+
+        app.get('/maze/:mazeId', (req, res) => {
+            log.trace(__filename, req.url, 'Searching for MazeID ' + req.params.mazeId);
+            try {
+                let maze: IMaze = findMaze(req.params.mazeId);
+                res.status(200).json(maze);
+            } catch (err) {
+                res.status(404).json({ status: 'Maze Not Found: ' + req.params.mazeId });
+            }
+        });
+
+        /** TEAM ROUTES **/
+        app.get('/teams', (req, res) => {
+            log.trace(__filename, req.url, 'Sending list of teams.');
+            res.status(200).json(teams);
+        });
+
+        app.get('/team', (req, res) => {
+            log.trace(__filename, req.url, 'Searching for TeamID ' + req.params.teamId);
+            try {
+                let team: ITeam = findTeam(req.params.teamId);
+                res.status(200).json(team);
+            } catch (err) {
+                res.status(404).json({ status: 'Team Not Found: ' + req.params.mazeId });
+            }
+        });
+
+        /** SCORE ROUTES **/
+        app.get('/scores', (req, res) => {
+            log.trace(__filename, req.url, 'Sending list of scores.');
+            res.status(200).json(scoreList);
+        });
+
+        // Bad Routes
+        app.get('/*', function(req, res) {
+            log.trace(__filename, req.url, 'Bad route - rendering index.');
+
+            res.render('index', {
+                contentType: 'text/html',
+                responseCode: 404,
+                host: req.headers.host
+            });
+        });
     });
 }
 

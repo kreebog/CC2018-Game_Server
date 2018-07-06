@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -6,18 +9,15 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 require('dotenv').config();
+const path_1 = __importDefault(require("path"));
 const consts = __importStar(require("./consts"));
 const cc2018_ts_lib_1 = require("cc2018-ts-lib"); // import classes
 const cc2018_ts_lib_2 = require("cc2018-ts-lib"); // import classes
 const util_1 = require("util");
 const svc = __importStar(require("./request"));
 const express_1 = __importDefault(require("express"));
-const router_1 = __importDefault(require("./router"));
 // set module instance references
 let httpServer; // will be set with app.listen
 const enums = cc2018_ts_lib_1.Enums.getInstance();
@@ -75,6 +75,10 @@ function loadMazeById(mazeId) {
         });
     }
 }
+/**
+ * Quick scan of mazes array to determine if the maze is already cached
+ * @param mazeId
+ */
 function mazeLoaded(mazeId) {
     for (let n = 0; n < mazes.length; n++) {
         if (mazes[n].id == mazeId)
@@ -93,6 +97,7 @@ function updateMazesCache() {
         // populate the mazes list
         mazeList.forEach(mazeStub => {
             loadMazeById(mazeStub.id);
+            mazeStub.url = util_1.format('%s/maze/%d:%d:%s', consts.GAME_SVC_URL, mazeStub.height, mazeStub.width, mazeStub.seed);
         });
         // attempt to start the service
         if (!serviceStarted)
@@ -231,7 +236,10 @@ function startServer() {
             // move on to the next route
             next();
         });
-        app.get('/game/get/:gameId', function (req, res) {
+        app.get('/favicon.ico', (req, res) => {
+            res.status(200).sendFile(path_1.default.resolve('/views/favicon.ico'));
+        });
+        app.get('/game/:gameId', function (req, res) {
             // find game in games array
             let gameId = req.params.gameId;
             let game;
@@ -246,7 +254,7 @@ function startServer() {
         /**
          * Sends JSON list of all current games with url to full /get/GameId link
          */
-        app.get('/game/get', function (req, res) {
+        app.get('/games', function (req, res) {
             log.debug(__filename, req.url, 'Returning list of active games.');
             if (games.length == 0) {
                 res.status(200).json({ status: 'No active games found.' });
@@ -305,9 +313,7 @@ function startServer() {
         app.get('/game/action/move/:gameId/:direction', function (req, res) {
             try {
                 if (req.params.gameId === undefined || req.params.direction === undefined) {
-                    return res
-                        .status(400)
-                        .json({ status: 'Missing argument(s).  Format=/game/action/move/<GameID>/<Direction>' });
+                    return res.status(400).json({ status: 'Missing argument(s).  Format=/game/action/move/<GameID>/<Direction>' });
                 }
                 let gameId = req.params.gameId;
                 let argDir = util_1.format('%s', req.params.direction).toUpperCase();
@@ -357,15 +363,11 @@ function startServer() {
                         break;
                     case 'LOOK':
                         if (isNaN(dir))
-                            return res
-                                .status(400)
-                                .json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
+                            return res.status(400).json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
                         break;
                     case 'JUMP':
                         if (isNaN(dir))
-                            return res
-                                .status(400)
-                                .json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
+                            return res.status(400).json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
                         break;
                     case 'WRITE':
                         break;
@@ -384,7 +386,50 @@ function startServer() {
             }
             res.status(200).json({ status: 'ok' });
         });
-        app.use('/*', router_1.default);
+        /** MAZE ROUTES **/
+        app.get('/mazes', (req, res) => {
+            log.trace(__filename, req.url, 'Sending list of mazes.');
+            res.status(200).json(mazeList);
+        });
+        app.get('/maze/:mazeId', (req, res) => {
+            log.trace(__filename, req.url, 'Searching for MazeID ' + req.params.mazeId);
+            try {
+                let maze = findMaze(req.params.mazeId);
+                res.status(200).json(maze);
+            }
+            catch (err) {
+                res.status(404).json({ status: 'Maze Not Found: ' + req.params.mazeId });
+            }
+        });
+        /** TEAM ROUTES **/
+        app.get('/teams', (req, res) => {
+            log.trace(__filename, req.url, 'Sending list of teams.');
+            res.status(200).json(teams);
+        });
+        app.get('/team', (req, res) => {
+            log.trace(__filename, req.url, 'Searching for TeamID ' + req.params.teamId);
+            try {
+                let team = findTeam(req.params.teamId);
+                res.status(200).json(team);
+            }
+            catch (err) {
+                res.status(404).json({ status: 'Team Not Found: ' + req.params.mazeId });
+            }
+        });
+        /** SCORE ROUTES **/
+        app.get('/scores', (req, res) => {
+            log.trace(__filename, req.url, 'Sending list of scores.');
+            res.status(200).json(scoreList);
+        });
+        // Bad Routes
+        app.get('/*', function (req, res) {
+            log.trace(__filename, req.url, 'Bad route - rendering index.');
+            res.render('index', {
+                contentType: 'text/html',
+                responseCode: 404,
+                host: req.headers.host
+            });
+        });
     });
 }
 /**
