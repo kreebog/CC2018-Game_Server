@@ -1,7 +1,8 @@
 require('dotenv').config();
 import * as consts from './consts';
-import { IMazeStub, IMaze, ICell, IScore, ITeam, GAME_RESULTS } from 'cc2018-ts-lib'; // import class interfaces
+import { IMazeStub, IMaze, ICell, IScore, ITeam } from 'cc2018-ts-lib'; // import class interfaces
 import { Logger, Team, Bot, Game, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
+import { DIRS, GAME_RESULTS, GAME_STATES, ACTIONS, TAGS } from 'cc2018-ts-lib'; // import classes
 
 import { format } from 'util';
 import { LOG_LEVELS } from 'cc2018-ts-lib/dist/Logger';
@@ -17,38 +18,38 @@ const log = Logger.getInstance();
 const app = express();
 
 // configure modules
-log.setLogLevel(consts.NODE_ENV == 'DVLP' ? LOG_LEVELS.TRACE : LOG_LEVELS.INFO);
-app.set('views', 'views');      // using pug html rendering engine
-app.set('view engine', 'pug');  // using pug html rendering engine
+log.setLogLevel(parseInt(process.env['LOG_LEVEL'] || '3')); // defaults to "INFO"
+app.set('views', 'views'); // using pug html rendering engine
+app.set('view engine', 'pug'); // using pug html rendering engine
 
 // initialize cache arrays
-let mazes: Array<IMaze> = new Array<IMaze>();                // full mazes - added to when requested (TODO: Possible?)
-let mazeList: Array<IMazeStub> = new Array<IMazeStub>();     // list of available mazes
-let scoreList: Array<IScore> = new Array<IScore>();          // list of available scores
+let mazes: Array<IMaze> = new Array<IMaze>(); // full mazes - added to when requested (TODO: Possible?)
+let mazeList: Array<IMazeStub> = new Array<IMazeStub>(); // list of available mazes
+let scoreList: Array<IScore> = new Array<IScore>(); // list of available scores
 
 // initialize team and game tracking arrays
 let teams: Array<ITeam> = new Array<ITeam>();
 let games: Array<Game> = new Array<Game>();
 
 // activity tracking vars
-let serviceStarted: boolean = false;  // set true when startup() completes successfully
-let lastMazeListFill: number = 0;     // updated by Date.now() after cache request fulfillment 
-let lastScoreListFill: number = 0;    // updated by Date.now() after cache request fulfillment 
-let lastTeamListFill: number = 0;    // updated by Date.now() after cache request fulfillment 
+let serviceStarted: boolean = false; // set true when startup() completes successfully
+let lastMazeListFill: number = 0; // updated by Date.now() after cache request fulfillment
+let lastScoreListFill: number = 0; // updated by Date.now() after cache request fulfillment
+let lastTeamListFill: number = 0; // updated by Date.now() after cache request fulfillment
 
 // Service End Points
 const EP = {
-    'mazes': format('%s/%s', consts.MAZE_SVC_URL, 'get'),
-    'mazeById': format('%s/%s', consts.MAZE_SVC_URL, 'get/:mazeId'),
-    'scores': format('%s/%s', consts.SCORE_SVC_URL, 'get'),
-    'teams': format('%s/%s', consts.TEAM_SVC_URL, 'get'),
-}
+    mazes: format('%s/%s', consts.MAZE_SVC_URL, 'get'),
+    mazeById: format('%s/%s', consts.MAZE_SVC_URL, 'get/:mazeId'),
+    scores: format('%s/%s', consts.SCORE_SVC_URL, 'get'),
+    teams: format('%s/%s', consts.TEAM_SVC_URL, 'get')
+};
 
 /**
  * Useful debug tool - dumps key/val array to debug/trace logs
- * 
- * @param list 
- * @param key 
+ *
+ * @param list
+ * @param key
  */
 function dumpArray(list: Array<any>, key: string) {
     list.forEach(item => {
@@ -59,17 +60,17 @@ function dumpArray(list: Array<any>, key: string) {
 
 /**
  * Gets a maze (as a data object only) from the maze service and puts it into the mazes array
- * 
- * @param mazeId 
+ *
+ * @param mazeId
  */
 function loadMazeById(mazeId: string) {
     if (mazeLoaded(mazeId)) {
-        log.debug(__filename, 'loadMazeById()', format('Maze [%s] already loaded, skipping.', mazeId));
+        log.trace(__filename, 'loadMazeById()', format('Maze [%s] already loaded, skipping.', mazeId));
     } else {
         svc.doRequest(EP['mazeById'].replace(':mazeId', mazeId), function handleGetMaze(res: Response, body: any) {
             let maze: IMaze = JSON.parse(body); // this assignment is not totally necessary, but helps debug logging
             mazes.push(maze);
-            log.debug(__filename, 'handleGetMaze()', format('Maze %s loaded.', maze.id));
+            log.trace(__filename, 'handleGetMaze()', format('Maze %s loaded.', maze.id));
         });
     }
 }
@@ -83,7 +84,7 @@ function mazeLoaded(mazeId: string): boolean {
 
 // Pull the list of available mazes from the maze-service
 // cache it locally.  Refreshses as part of the incoming request
-// process if consts.CACHE_DELAY is exceeded 
+// process if consts.CACHE_DELAY is exceeded
 function updateMazesCache() {
     svc.doRequest(EP['mazes'], function handleGetMazes(res: Response, body: any) {
         mazeList = JSON.parse(body);
@@ -97,7 +98,6 @@ function updateMazesCache() {
 
         // attempt to start the service
         if (!serviceStarted) bootstrap();
-
     });
 }
 
@@ -112,7 +112,6 @@ function updateTeamsCache() {
         if (!serviceStarted) bootstrap();
     });
 }
-
 
 // Same as updateMazesCache, but with scores
 function udpateScoresCache() {
@@ -131,16 +130,35 @@ function udpateScoresCache() {
  */
 function bootstrap() {
     if (mazeList.length > 0 && scoreList.length > 0 && teams.length > 0) {
+        log.debug(
+            __filename,
+            'bootstrap()',
+            format(
+                'Caches populated, starting server.  mazeList:%d, scoreList:%d, teams:%d',
+                mazeList.length,
+                scoreList.length,
+                teams.length
+            )
+        );
         startServer(); // start the express server
     } else {
-        log.warn(__filename, 'bootstrap()', format('Maze, Score, and Team lists must be populated.  mazeList Length=%d, scoreList Length=%d', mazeList.length, scoreList.length));
+        log.warn(
+            __filename,
+            'bootstrap()',
+            format(
+                'Maze, Score, and Team lists must be populated.  mazeList:%d, scoreList:%d, teams:%d',
+                mazeList.length,
+                scoreList.length,
+                teams.length
+            )
+        );
     }
 }
 
 /**
  * Find and return the game with the matching ID
- * 
- * @param gameId 
+ *
+ * @param gameId
  */
 function findGame(gameId: string): Game {
     for (let n = 0; n < games.length; n++) {
@@ -149,30 +167,47 @@ function findGame(gameId: string): Game {
         }
     }
 
-    log.warn(__filename, 'findGame()', 'Maze not found: ' + gameId);
+    log.debug(__filename, 'findGame()', 'Game not found: ' + gameId);
     throw new Error('Game Not Found: ' + gameId);
 }
 
 /**
- * Find and return the team with the matching ID
- * 
- * @param teamId 
+ * Quickly find and return the game id for the first game
+ * in progress for the given team
+ *
+ * @param teamId
  */
-function findTeam(teamId: number): ITeam {
+function findGameInProgress(teamId: string): string {
+    for (let n = 0; n < games.length; n++) {
+        if (games[n].getTeam().getId() == teamId) {
+            log.debug(__filename, 'findGameInProgress()', 'Game found: ' + games[n].getId());
+            return games[n].getId();
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Find and return the team with the matching ID
+ *
+ * @param teamId
+ */
+function findTeam(teamId: string): ITeam {
     for (let n = 0; n < teams.length; n++) {
         if (teams[n].id == teamId) {
             return teams[n];
         }
     }
 
-    log.warn(__filename, 'findTeam()', 'Team not found: ' + teamId);
+    log.debug(__filename, 'findTeam()', 'Team not found: ' + teamId);
     throw new Error('Team Not Found: ' + teamId);
 }
 
 /**
  * Find and return the maze with the matching ID
- * 
- * @param mazeId 
+ *
+ * @param mazeId
  */
 function findMaze(mazeId: string): IMaze {
     for (let n = 0; n < mazes.length; n++) {
@@ -191,18 +226,21 @@ udpateScoresCache();
 updateTeamsCache();
 
 function startServer() {
-
     // open the service port
-    httpServer = app.listen(consts.GAME_SVC_PORT, function () {
-        log.info(__filename, 'startServer()', format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT))
+    httpServer = app.listen(consts.GAME_SVC_PORT, function() {
+        log.info(
+            __filename,
+            'startServer()',
+            format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT)
+        );
 
         serviceStarted = true;
 
         // allow CORS for this application
-        app.use(function (req, res, next) {
+        app.use(function(req, res, next) {
             log.trace(__filename, 'app.listen()', format('New request: %s', req.url));
-            res.header("Access-Control-Allow-Origin", "*");
-            res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+            res.header('Access-Control-Allow-Origin', '*');
+            res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
             // check for cache update needs
             if (Date.now() - lastMazeListFill > consts.CACHE_DELAY) {
@@ -223,39 +261,50 @@ function startServer() {
                 updateTeamsCache();
             }
 
+            // make all  querystring arguments upper case
+            if (req.query !== undefined) {
+                for (var key in req.query) {
+                    if (key == 'dir') {
+                        req.query[key] = req.query[key].toUpperCase();
+                    }
+                }
+            }
+
             // move on to the next route
             next();
         });
 
-        app.get('/get/:gameId', function (req, res) {
+        app.get('/game/get/:gameId', function(req, res) {
             // find game in games array
             let gameId = req.params.gameId;
             let game: Game;
-            
+
             try {
                 game = findGame(gameId);
                 res.status(200).json(game);
             } catch {
-                res.status(404).json({"status":format('Game [%s] not found.', gameId)});
+                res.status(404).json({ status: format('Game [%s] not found.', gameId) });
             }
         });
 
-        // send list of available games
-        app.get('/get', function (req, res) {
+        /**
+         * Sends JSON list of all current games with url to full /get/GameId link
+         */
+        app.get('/game/get', function(req, res) {
             log.debug(__filename, req.url, 'Returning list of active games.');
 
             if (games.length == 0) {
-                res.status(200).json({'status':'No active games found.'});
+                res.status(200).json({ status: 'No active games found.' });
             } else {
                 let data = new Array();
                 for (let n = 0; n < games.length; n++) {
                     data.push({
-                        'id':games[n].getId(), 
-                        'teamId':games[n].getTeam().getTeamId(), 
-                        'teamName':games[n].getTeam().getTeamName(), 
-                        'gameState':games[n].getState(),
-                        'moveCount':games[n].getScore().MoveCount,
-                        'url':format('http://%s%s/%s', req.host, req.url, games[n].getId())
+                        id: games[n].getId(),
+                        teamId: games[n].getTeam().getId(),
+                        teamName: games[n].getTeam().getName(),
+                        gameState: games[n].getState(),
+                        moveCount: games[n].getScore().getMoveCount(),
+                        url: format('http://%s:%d%s/%s', req.hostname, consts.GAME_SVC_PORT, req.url, games[n].getId())
                     });
                 }
 
@@ -263,14 +312,30 @@ function startServer() {
             }
         });
 
-        app.get('/game/new/:mazeId/:teamId', function (req, res) {
+        /**
+         * Attempts to create a new game using the given Team and Maze
+         * -- If team is already in a game, redirects to /get/GameID
+         * -- If team or maze not found, returns error.
+         */
+        app.get('/game/new/:mazeId/:teamId', function(req, res) {
             try {
                 // create and return a new game against the given maze
-                let teamId = parseInt(req.params.teamId);
+                let teamId = req.params.teamId;
+                let gameId = findGameInProgress(teamId);
+
+                if (gameId != '') {
+                    log.debug(
+                        __filename,
+                        req.url,
+                        format('Redirecting to /get/gameId - Team %d already in game %s.', teamId, gameId)
+                    );
+                    return res.redirect('/get/' + gameId);
+                }
+
                 let maze: IMaze = findMaze(req.params.mazeId);
                 let score: Score = new Score();
                 let teamStub: ITeam = findTeam(teamId);
-                let team: Team = new Team(teamStub.name, teamStub.id, teamStub.members);
+                let team: Team = new Team(teamStub);
 
                 if (team) {
                     let game: Game = new Game(maze, team, score);
@@ -279,14 +344,114 @@ function startServer() {
                     res.status(200).json(game);
                 } else {
                     log.error(__filename, req.url, 'Unable to add new game. Invalid teamId: ' + teamId);
-                    res.status(500).json({"status":format('Invalid teamId: %s', teamId)});
+                    res.status(500).json({ status: format('Invalid teamId: %s', teamId) });
                 }
 
                 //let game: Game = new Game(maze, team, new Score());
-            } catch(err) {
-                log.error(__filename, req.url, 'Error while adding game: ' + JSON.stringify(err));
-                res.status(404).json({"status":format('Error creating game: %s', JSON.stringify(err))});
+            } catch (err) {
+                log.error(__filename, req.url, 'Error creating game: ' + err.toString());
+                res.status(404).json({ status: format('Error creating game: %s', err.toString()) });
             }
+        });
+
+        // move the team's AI in the given direction (if possible)
+        app.get('/game/action/move/:gameId/:direction', function(req, res) {
+            try {
+                if (req.params.gameId === undefined || req.params.direction === undefined) {
+                    return res
+                        .status(400)
+                        .json({ status: 'Missing argument(s).  Format=/game/action/move/<GameID>/<Direction>' });
+                }
+
+                let gameId = req.params.gameId;
+                let argDir: any = format('%s', req.params.direction).toUpperCase();
+
+                let dir: number = parseInt(DIRS[argDir]); // value will be NaN if not a valid direction name
+                if (isNaN(dir)) {
+                    throw new Error(
+                        format(
+                            'Invalid Direction: %s.  Valid directions are NONE, NORTH, SOUTH, EAST, and WEST',
+                            req.params.direction
+                        )
+                    );
+                }
+
+                let game: Game = findGame(gameId); // will throw error if game not found - drops to catch block
+
+                res.status(200).json({ status: format('Move %s completed.', argDir) });
+            } catch (err) {
+                log.error(__filename, req.url, 'Error executing move: ' + err.toString());
+                return res.status(500).json({ status: err.toString() });
+            }
+        });
+
+        /**
+         * Performs an action (MOVE, LOOK, JUMP, WRITE, SAY)
+         * Format: /game/action/<gameId>?act=[move|look|jump|write|say]&arg1=[direction|message]
+         *
+         * Returns the results of the action and an engram describing
+         * new state.
+         */
+        app.get('/game/action/:gameId*', function(req, res) {
+            try {
+                // make sure we have the right arguments
+                if (req.query.act === undefined || req.query.gameId === undefined) {
+                    return res.status(400).json({
+                        status:
+                            'Missing querystring argument(s). Format=?act=[move|look|jump|write|say][&dir=<none|north|south|east|west>][&message=text]'
+                    });
+                }
+
+                let gameId = req.params.gameId;
+                let argAct: string = format('%s', req.query.act).toUpperCase();
+                let argDir: any = format('%s', req.query.dir).toUpperCase();
+
+                let dir: number = parseInt(DIRS[argDir]); // value will be NaN if not a valid direction name
+                let game: Game = findGame(gameId); // will throw error if game not found - drops to catch block
+
+                switch (argAct) {
+                    case 'MOVE':
+                        if (isNaN(dir)) return res.status(400).json({ status: 'Invalid direction.' });
+
+                        if (game.isOpenDir(dir)) {
+                            game.doMove(dir);
+                            console.log("NOPE CAN't GO THAT WAY!");
+                        } else {
+                            console.log("NOPE CAN't GO THAT WAY!");
+                        }
+
+                        break;
+                    case 'LOOK':
+                        if (isNaN(dir))
+                            return res
+                                .status(400)
+                                .json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
+                        break;
+                    case 'JUMP':
+                        if (isNaN(dir))
+                            return res
+                                .status(400)
+                                .json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
+                        break;
+                    case 'WRITE':
+                        break;
+                    case 'SAY':
+                        break;
+                    default:
+                        log.warn(__filename, req.url, 'Invalid Action: ' + argAct);
+                        return res.status(400).json({
+                            status: format(
+                                'Invalid action: %s.  Expected act=[ MOVE | LOOK | JUMP | WRITE | SAY ]',
+                                argAct
+                            )
+                        });
+                }
+            } catch (err) {
+                log.error(__filename, req.url, 'Error executing action: ' + err.toString());
+                return res.status(500).json({ status: err.toString() });
+            }
+
+            res.status(200).json({ status: 'ok' });
         });
 
         app.use('/*', router);
@@ -299,7 +464,7 @@ function startServer() {
 process.on('SIGINT', function onSigInt() {
     // all done, close the db connection
     log.info(__filename, 'onSigInt()', 'Got SIGINT - Exiting applicaton...');
-    doShutdown()
+    doShutdown();
 });
 
 /**
@@ -308,7 +473,7 @@ process.on('SIGINT', function onSigInt() {
 process.on('SIGTERM', function onSigTerm() {
     // all done, close the db connection
     log.info(__filename, 'onSigTerm()', 'Got SIGTERM - Exiting applicaton...');
-    doShutdown()
+    doShutdown();
 });
 
 /**

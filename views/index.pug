@@ -9,41 +9,51 @@ html
         hr
         br
         table
-            th Method
+            th Link
             th Action
             th Type
             th Arguments
             th Return
-            th Sample
+            th Method
             th Status
             th Description
             tr
+                td(class='td-left')
+                    a(href= 'http://' + host) This Page
                 td Get
                 td Get
                 td HTML 
                 td(class='td-left') N/A
                 td(class='td-left') API Documentation
-                td(class='td-left')
-                    a(href= 'http://' + host) Sample Link
                 td Current
                 td(class='td-left') Returns this document.
             tr
+                td(class='td-left')
+                    a(href= 'http://' + host + '/game/get') List Games
                 td Get
                 td Get
                 td JSON 
                 td(class='td-left') N/A
                 td(class='td-left') List of active games.
-                td(class='td-left')
-                    a(href= 'http://' + host + '/get') Sample Link
                 td Current
                 td(class='td-left') Returns a list of currently active games.
             tr
+                td(class='td-left')
+                    a(href= 'http://' + host + '/game/get/625a0dbb-011d-4eb2-98f9-9c5a6775ad89') Get Game
                 td Get
                 td Get
                 td JSON 
                 td(class='td-left') GameId (GUID)
                 td(class='td-left') A single game object as JSON.
-                td(class='td-left')
-                    a(href= 'http://' + host + '/get/12312123123') Sample Link
                 td Current
                 td(class='td-left') Returns an active game with the matching GameID GUID. 
+            tr
+                td(class='td-left')
+                    a(href= 'http://' + host + '/game/new/10:10:SlipperyDevil/1') New Game
+                td Get
+                td Get
+                td JSON 
+                td(class='td-left') MazeId/TeamId
+                td(class='td-left') Game Data
+                td Current
+                td(class='td-left') Returns the game data for a new game session, or redirects to /get/GameID if team already has a game underway

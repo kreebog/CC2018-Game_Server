@@ -26,7 +26,7 @@ function doRequest(url, callback) {
             return;
         }
         // all good, apparently - fire othe callback 
-        log.debug(__filename, 'doRequest()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
+        log.trace(__filename, 'doRequest()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
         callback(res, body);
     });
 }

@@ -5,12 +5,15 @@ import { format } from 'util';
 export const NODE_ENV = process.env.NODE_ENV || 'PROD';
 
 // load env vars (or defaults if not found - aka PROD)
-export const MAZE_SVC_HOST = process.env.MAZE_SVC_URL || 'http://maze-service-code-camp.a3c1.starter-us-west-1.openshiftapps.com';
+export const MAZE_SVC_HOST =
+    process.env.MAZE_SVC_URL || 'http://maze-service-code-camp.a3c1.starter-us-west-1.openshiftapps.com';
 export const MAZE_SVC_PORT = process.env.MAZE_SVC_PORT || 8080;
-export const SCORE_SVC_HOST = process.env.SCORE_SVC_URL || 'http://score-service-code-camp.a3c1.starter-us-west-1.openshiftapps.com';
+export const SCORE_SVC_HOST =
+    process.env.SCORE_SVC_URL || 'http://score-service-code-camp.a3c1.starter-us-west-1.openshiftapps.com';
 export const SCORE_SVC_PORT = process.env.SCORE_SVC_PORT || 8080;
 export const GAME_SVC_PORT = process.env.GAME_SVC_PORT || 8080;
-export const TEAM_SVC_HOST = process.env.TEAM_SVC_URL || 'http://team-service-code-camp.a3c1.starter-us-west-1.openshiftapps.com';
+export const TEAM_SVC_HOST =
+    process.env.TEAM_SVC_URL || 'http://team-service-code-camp.a3c1.starter-us-west-1.openshiftapps.com';
 export const TEAM_SVC_PORT = process.env.TEAM_SVC_PORT || 8080;
 
 // construct base URLs

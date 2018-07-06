@@ -9,6 +9,7 @@ const log = cc2018_ts_lib_1.Logger.getInstance();
 const router = express_1.default.Router();
 router.get('/favicon.ico', (req, res) => { });
 router.get('/*', function (req, res) {
+    log.trace(__filename, req.url, 'Bad route - rendering index.');
     res.render('index', {
         contentType: 'text/html',
         responseCode: 404,
