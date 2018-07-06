@@ -60,7 +60,7 @@ html
                 td Get
                 td JSON 
                 td(class='td-left') N/A
-                td(class='td-left') List of Mazes
+                td(class='td-left') List of Maze Data
                 td Current
                 td(class='td-left') Returns the list of Mazes (stubbed data) available on the server 
             tr
@@ -75,14 +75,34 @@ html
                 td(class='td-left') Returns the maze data for a single maze with the given MazeId
             tr
                 td(class='td-left')
+                    a(href= 'http://maze.code-camp-2018.com/list') List Mazes
+                td Get
+                td Get
+                td HTML
+                td(class='td-left') N/A
+                td(class='td-left') List of Mazes
+                td Current
+                td(class='td-left') Returns an HTML list of mazes
+            tr
+                td(class='td-left')
                     a(href= 'http://' + host + '/teams') Get Teams
                 td Get
                 td Get
                 td JSON 
                 td(class='td-left') N/A
-                td(class='td-left') List of Teams
+                td(class='td-left') List of Team Data
                 td Current
                 td(class='td-left') Returns all Teams
+            tr
+                td(class='td-left')
+                    a(href= 'http://team.code-camp-2018.com/list') List Teams
+                td Get
+                td Get
+                td HTML
+                td(class='td-left') N/A
+                td(class='td-left') List of Teams
+                td Current
+                td(class='td-left') Returns an HTML List of Teams
             tr
                 td(class='td-left')
                     a(href= 'http://' + host + '/scores') Get Scores
@@ -90,7 +110,17 @@ html
                 td Get
                 td JSON 
                 td(class='td-left') N/A
-                td(class='td-left') List of Scores
+                td(class='td-left') List of Score Data
                 td Current
                 td(class='td-left') Returns all Scores
+            tr
+                td(class='td-left')
+                    a(href= 'http://score.code-camp-2018.com/list') List Scores
+                td Get
+                td Get
+                td HTML
+                td(class='td-left') N/A
+                td(class='td-left') List of Scores
+                td Current
+                td(class='td-left') Returns an HTML List of Scores
     include foot.pug
