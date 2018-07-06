@@ -15,6 +15,7 @@ const path_1 = __importDefault(require("path"));
 const consts = __importStar(require("./consts"));
 const cc2018_ts_lib_1 = require("cc2018-ts-lib"); // import classes
 const cc2018_ts_lib_2 = require("cc2018-ts-lib"); // import classes
+const compression_1 = __importDefault(require("compression"));
 const util_1 = require("util");
 const svc = __importStar(require("./request"));
 const express_1 = __importDefault(require("express"));
@@ -204,6 +205,7 @@ function startServer() {
     httpServer = app.listen(consts.GAME_SVC_PORT, function () {
         log.info(__filename, 'startServer()', util_1.format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT));
         serviceStarted = true;
+        app.use(compression_1.default());
         // allow CORS for this application
         app.use(function (req, res, next) {
             log.trace(__filename, 'app.listen()', util_1.format('New request: %s', req.url));

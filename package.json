@@ -21,12 +21,14 @@
     "dependencies": {
         "@types/request": "^2.47.1",
         "cc2018-ts-lib": "^1.4.1",
+        "compression": "^1.7.2",
         "dotenv": "^6.0.0",
         "express": "^4.16.3",
         "pug": "^2.0.3",
         "request": "^2.87.0"
     },
     "devDependencies": {
+        "@types/compression": "0.0.36",
         "@types/express": "^4.16.0",
         "@types/node": "^10.5.2",
         "typescript": "^2.9.2"

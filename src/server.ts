@@ -4,6 +4,7 @@ import * as consts from './consts';
 import { IMazeStub, IMaze, ICell, IScore, ITeam } from 'cc2018-ts-lib'; // import class interfaces
 import { Logger, Team, Bot, Game, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
 import { DIRS, GAME_RESULTS, GAME_STATES, ACTIONS, TAGS } from 'cc2018-ts-lib'; // import classes
+import compression from 'compression';
 
 import { format } from 'util';
 import { Server } from 'http';
@@ -217,6 +218,8 @@ function startServer() {
         log.info(__filename, 'startServer()', format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT));
 
         serviceStarted = true;
+
+        app.use(compression());
 
         // allow CORS for this application
         app.use(function(req, res, next) {
