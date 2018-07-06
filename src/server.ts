@@ -97,7 +97,7 @@ function updateMazesCache() {
         // populate the mazes list
         mazeList.forEach(mazeStub => {
             loadMazeById(mazeStub.id);
-            mazeStub.url = format('%s/maze/%d:%d:%s', consts.GAME_SVC_URL, mazeStub.height, mazeStub.width, mazeStub.seed);
+            mazeStub.url = format('%s/maze/%d:%d:%s', consts.GAME_SVC_EXT_URL, mazeStub.height, mazeStub.width, mazeStub.seed);
         });
 
         // attempt to start the service

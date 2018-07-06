@@ -14,8 +14,11 @@ export const SCORE_SVC_PORT = process.env.SCORE_SVC_PORT || 8080;
 export const TEAM_SVC_HOST = process.env.TEAM_SVC_URL || 'http://team-service.code-camp.svc';
 export const TEAM_SVC_PORT = process.env.TEAM_SVC_PORT || 8080;
 
-export const GAME_SVC_HOST = process.env.GAME_SVC_URL || 'http://code-camp-2018.com';
+export const GAME_SVC_HOST = process.env.GAME_SVC_URL || 'http://game-server.code-camp.svc';
 export const GAME_SVC_PORT = process.env.GAME_SVC_PORT || 8080;
+
+export const GAME_SVC_EXT_PORT = process.env.GAME_SVC_EXT_PORT || 80;
+export const GAME_SVC_EXT_URL = process.env.GAME_SVC_EXT_URL + ':' + GAME_SVC_EXT_PORT || 'http://code-camp-2018.com';
 
 // construct base URLs
 export const MAZE_SVC_URL = format('%s:%s', MAZE_SVC_HOST, MAZE_SVC_PORT);
