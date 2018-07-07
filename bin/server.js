@@ -259,7 +259,7 @@ function startServer() {
          * Sends JSON list of all current games with url to full /get/GameId link
          */
         app.get('/games', function (req, res) {
-            log.debug(__filename, req.url, 'Returning list of active games.');
+            log.debug(__filename, req.url, 'Returning list of active games (stub data).');
             if (games.length == 0) {
                 // response code 204 (NO CONTENT)
                 res.status(204).send();
@@ -267,14 +267,14 @@ function startServer() {
             else {
                 let data = new Array();
                 for (let n = 0; n < games.length; n++) {
-                    data.push({
-                        id: games[n].getId(),
-                        teamId: games[n].getTeam().getId(),
-                        teamName: games[n].getTeam().getName(),
+                    let stub = {
+                        gameId: games[n].getId(),
+                        team: games[n].getTeam().toJSON(),
                         gameState: games[n].getState(),
-                        moveCount: games[n].getScore().getMoveCount(),
+                        score: games[n].getScore().toJSON(),
+                        mazeStub: new cc2018_ts_lib_1.Maze(games[n].getMaze()).getMazeStub(),
                         url: util_1.format('%s/%s/%s', consts.GAME_SVC_EXT_URL, 'game', games[n].getId())
-                    });
+                    };
                 }
                 res.status(200).json(data);
             }

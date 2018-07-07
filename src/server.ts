@@ -2,7 +2,7 @@ require('dotenv').config();
 import path from 'path';
 import * as consts from './consts';
 import { IMazeStub, IMaze, ICell, IScore, ITeam } from 'cc2018-ts-lib'; // import class interfaces
-import { Logger, Team, Bot, Game, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
+import { Logger, Team, Bot, Game, IGameStub, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
 import { DIRS, GAME_RESULTS, GAME_STATES, ACTIONS, TAGS } from 'cc2018-ts-lib'; // import classes
 import compression from 'compression';
 import * as action from './actions';
@@ -283,7 +283,7 @@ function startServer() {
          * Sends JSON list of all current games with url to full /get/GameId link
          */
         app.get('/games', function(req, res) {
-            log.debug(__filename, req.url, 'Returning list of active games.');
+            log.debug(__filename, req.url, 'Returning list of active games (stub data).');
 
             if (games.length == 0) {
                 // response code 204 (NO CONTENT)
@@ -291,14 +291,14 @@ function startServer() {
             } else {
                 let data = new Array();
                 for (let n = 0; n < games.length; n++) {
-                    data.push({
-                        id: games[n].getId(),
-                        teamId: games[n].getTeam().getId(),
-                        teamName: games[n].getTeam().getName(),
+                    let stub: IGameStub = {
+                        gameId: games[n].getId(),
+                        team: games[n].getTeam().toJSON(),
                         gameState: games[n].getState(),
-                        moveCount: games[n].getScore().getMoveCount(),
+                        score: games[n].getScore().toJSON(),
+                        mazeStub: new Maze(games[n].getMaze()).getMazeStub(),
                         url: format('%s/%s/%s', consts.GAME_SVC_EXT_URL, 'game', games[n].getId())
-                    });
+                    };
                 }
 
                 res.status(200).json(data);
