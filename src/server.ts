@@ -263,7 +263,7 @@ function startServer() {
         });
 
         app.get('/favicon.ico', (req, res) => {
-            res.status(200).sendFile(path.resolve('/views/favicon.ico'));
+            res.status(200).sendFile(path.resolve('./views/favicon.ico'));
         });
 
         app.get('/game/:gameId', function(req, res) {
@@ -299,6 +299,8 @@ function startServer() {
                         mazeStub: new Maze(games[n].getMaze()).getMazeStub(),
                         url: format('%s/%s/%s', consts.GAME_SVC_EXT_URL, 'game', games[n].getId())
                     };
+
+                    data.push(stub);
                 }
 
                 res.status(200).json(data);
