@@ -5,6 +5,7 @@ import { IMazeStub, IMaze, ICell, IScore, ITeam } from 'cc2018-ts-lib'; // impor
 import { Logger, Team, Bot, Game, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
 import { DIRS, GAME_RESULTS, GAME_STATES, ACTIONS, TAGS } from 'cc2018-ts-lib'; // import classes
 import compression from 'compression';
+import * as action from './actions';
 
 import { format } from 'util';
 import { Server } from 'http';
@@ -67,7 +68,7 @@ function loadMazeById(mazeId: string) {
     if (mazeLoaded(mazeId)) {
         log.trace(__filename, 'loadMazeById()', format('Maze [%s] already loaded, skipping.', mazeId));
     } else {
-        svc.doRequest(EP['mazeById'].replace(':mazeId', mazeId), function handleGetMaze(res: Response, body: any) {
+        svc.doRequest(EP['mazeById'].replace(':mazeId', mazeId), function handleGetMaze(res: any, body: any) {
             let maze: IMaze = JSON.parse(body); // this assignment is not totally necessary, but helps debug logging
             mazes.push(maze);
             log.trace(__filename, 'handleGetMaze()', format('Maze %s loaded.', maze.id));
@@ -208,6 +209,8 @@ function findMaze(mazeId: string): IMaze {
 }
 
 // initialize the server & cache refresh processes
+log.info(__filename, '', 'Starting Game Server v' + consts.APP_VERSION);
+
 updateMazesCache();
 udpateScoresCache();
 updateTeamsCache();
@@ -283,7 +286,8 @@ function startServer() {
             log.debug(__filename, req.url, 'Returning list of active games.');
 
             if (games.length == 0) {
-                res.status(200).json({ status: 'No active games found.' });
+                // response code 204 (NO CONTENT)
+                res.status(204).send();
             } else {
                 let data = new Array();
                 for (let n = 0; n < games.length; n++) {
@@ -293,12 +297,24 @@ function startServer() {
                         teamName: games[n].getTeam().getName(),
                         gameState: games[n].getState(),
                         moveCount: games[n].getScore().getMoveCount(),
-                        url: format('http://%s:%d%s/%s', req.hostname, consts.GAME_SVC_PORT, req.url, games[n].getId())
+                        url: format('%s/%s/%s', consts.GAME_SVC_EXT_URL, 'game', games[n].getId())
                     });
                 }
 
                 res.status(200).json(data);
             }
+        });
+
+        /**
+         * Renders an HTML list of games
+         */
+        app.get('/games/list', function(req, res) {
+            log.debug(__filename, req.url, 'Rendering list of active games.');
+            res.render('list', {
+                contentType: 'text/html',
+                responseCode: 200,
+                games: games
+            });
         });
 
         /**
@@ -313,8 +329,8 @@ function startServer() {
                 let gameId = findGameInProgress(teamId);
 
                 if (gameId != '') {
-                    log.debug(__filename, req.url, format('Redirecting to /get/gameId - Team %d already in game %s.', teamId, gameId));
-                    return res.redirect('/get/' + gameId);
+                    log.debug(__filename, req.url, format('Redirecting to /get/gameId - Team %s already in game %s.', teamId, gameId));
+                    return res.redirect('/game/' + gameId);
                 }
 
                 let maze: IMaze = findMaze(req.params.mazeId);
@@ -370,12 +386,12 @@ function startServer() {
          * Returns the results of the action and an engram describing
          * new state.
          */
-        app.get('/game/action/:gameId*', function(req, res) {
+        app.get('/game/action/:gameId', function(req, res) {
             try {
                 // make sure we have the right arguments
-                if (req.query.act === undefined || req.query.gameId === undefined) {
+                if (req.query.act === undefined || req.params.gameId === undefined) {
                     return res.status(400).json({
-                        status: 'Missing querystring argument(s). Format=?act=[move|look|jump|write|say][&dir=<none|north|south|east|west>][&message=text]'
+                        status: 'Missing querystring argument(s). Format=?act=[move|look|jump|write|say] [&dir=<none|north|south|east|west>] [&message=text]'
                     });
                 }
 
@@ -385,6 +401,8 @@ function startServer() {
 
                 let dir: number = parseInt(DIRS[argDir]); // value will be NaN if not a valid direction name
                 let game: Game = findGame(gameId); // will throw error if game not found - drops to catch block
+                let maze: Maze = new Maze(game.getMaze());
+                let cell: Cell = maze.getCell(game.getPlayerPos().row, game.getPlayerPos().col);
 
                 switch (argAct) {
                     case 'MOVE':
@@ -400,6 +418,7 @@ function startServer() {
                         break;
                     case 'LOOK':
                         if (isNaN(dir)) return res.status(400).json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
+                        return res.status(200).json(action.doLook(cell, dir));
                         break;
                     case 'JUMP':
                         if (isNaN(dir)) return res.status(400).json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });

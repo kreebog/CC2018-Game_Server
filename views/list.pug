@@ -1,0 +1,35 @@
+doctype html
+html
+    include head.pug
+    div(class='container text-center')
+        h1 Game Server - Active Games
+        hr
+        div(class='accordion text-center bg-dark' id='accTeams')
+            if (games.length > 0)
+                each game in games
+                    div(class='card' style='border-color:#000')
+                        div(class='card-header bg-dark' id='heading-' + game.id)
+                            h5(class='mb-0 bg-dark')
+                                button(class='btn btn-link collapsed' type='button' data-toggle='collapse' data-target='#collapse-' + game.id, aria-expanded='false', aria-controls='collpase-' + game.id style='font-size:xx-large;')
+                                    =game.team.name
+                                br 
+                                small(class='text-muted') #{game.maze.seed} (#{game.maze.height} x #{game.maze.width})
+                        div(id='collapse-' + game.id class='collapse' aria-labelledby='heading-' + game.id data-parent='#accTeams')
+                            div(class='card-body' style='background-color:#222222')
+                                p Game State:&nbsp;&nbsp;
+                                    if (game.state == 1)
+                                        |NEW
+                                    else if (game.state == 2)
+                                        |RUNNING
+                                    else if (game.state == 4 || game.state == 8)
+                                        |WAITING
+                                    else if (game.state == 16)
+                                        |FINISHED
+                                    if (game.state == 16)
+                                        |&nbsp;&nbsp;Result: #{game.score.gameResult}
+                                p Game Round:&nbsp;&nbsp;#{game.score.gameRound}
+                                p Move Count:&nbsp;&nbsp;#{game.score.moveCount}
+                                p Back Track Count:&nbsp;&nbsp;#{game.score.backtrackCount}
+                                p Bonus Points:&nbsp;&nbsp;#{game.score.bonusPoints}
+            else
+                h3(style='background-color:#111111') No games currently available.

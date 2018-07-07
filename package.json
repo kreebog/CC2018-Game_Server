@@ -1,6 +1,6 @@
 {
     "name": "cc2018-game_server",
-    "version": "1.0.0",
+    "version": "1.3.31",
     "description": "Primary game server for Code Camp 2018",
     "main": "bin/server.js",
     "scripts": {
