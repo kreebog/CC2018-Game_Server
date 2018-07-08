@@ -241,7 +241,7 @@ function startServer() {
             next();
         });
         app.get('/favicon.ico', (req, res) => {
-            res.status(200).sendFile(path_1.default.resolve('./views/favicon.ico'));
+            res.sendFile(path_1.default.resolve('./views/favicon.ico'));
         });
         app.get('/game/:gameId', function (req, res) {
             // find game in games array
@@ -249,7 +249,7 @@ function startServer() {
             let game;
             try {
                 game = findGame(gameId);
-                res.status(200).json(game);
+                res.json(game);
             }
             catch (_a) {
                 res.status(404).json({ status: util_1.format('Game [%s] not found.', gameId) });
@@ -277,7 +277,7 @@ function startServer() {
                     };
                     data.push(stub);
                 }
-                res.status(200).json(data);
+                res.json(data);
             }
         });
         /**
@@ -285,11 +285,7 @@ function startServer() {
          */
         app.get('/games/list', function (req, res) {
             log.debug(__filename, req.url, 'Rendering list of active games.');
-            res.render('list', {
-                contentType: 'text/html',
-                responseCode: 200,
-                games: games
-            });
+            res.render('list', { games: games });
         });
         /**
          * Attempts to create a new game using the given Team and Maze
@@ -301,9 +297,10 @@ function startServer() {
                 // create and return a new game against the given maze
                 let teamId = req.params.teamId;
                 let gameId = findGameInProgress(teamId);
+                let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
                 if (gameId != '') {
                     log.debug(__filename, req.url, util_1.format('Redirecting to /get/gameId - Team %s already in game %s.', teamId, gameId));
-                    return res.redirect('/game/' + gameId);
+                    return res.json({ status: 'Game already runnning.', url: gameUrl + gameId });
                 }
                 let maze = findMaze(req.params.mazeId);
                 let score = new cc2018_ts_lib_1.Score();
@@ -312,12 +309,13 @@ function startServer() {
                 if (team) {
                     let game = new cc2018_ts_lib_1.Game(maze, team, score);
                     games.push(game);
+                    res.json({ status: 'Game created.', url: gameUrl + game.getId() });
                     log.info(__filename, req.url, 'New game added to games list: ' + game.getId());
-                    res.status(200).json(game);
                 }
                 else {
                     log.error(__filename, req.url, 'Unable to add new game. Invalid teamId: ' + teamId);
-                    res.status(500).json({ status: util_1.format('Invalid teamId: %s', teamId) });
+                    // bad request (400)
+                    res.status(400).json({ status: util_1.format('Invalid teamId: %s', teamId) });
                 }
                 //let game: Game = new Game(maze, team, new Score());
             }
@@ -339,7 +337,7 @@ function startServer() {
                     throw new Error(util_1.format('Invalid Direction: %s.  Valid directions are NONE, NORTH, SOUTH, EAST, and WEST', req.params.direction));
                 }
                 let game = findGame(gameId); // will throw error if game not found - drops to catch block
-                res.status(200).json({ status: util_1.format('Move %s completed.', argDir) });
+                res.json({ status: util_1.format('Move %s completed.', argDir) });
             }
             catch (err) {
                 log.error(__filename, req.url, 'Error executing move: ' + err.toString());
@@ -383,7 +381,7 @@ function startServer() {
                     case 'LOOK':
                         if (isNaN(dir))
                             return res.status(400).json({ status: 'Invalid direction. Options: NONE|NORTH|SOUTH|EAST|WEST' });
-                        return res.status(200).json(action.doLook(cell, dir));
+                        return res.json(action.doLook(cell, dir));
                         break;
                     case 'JUMP':
                         if (isNaN(dir))
@@ -404,18 +402,18 @@ function startServer() {
                 log.error(__filename, req.url, 'Error executing action: ' + err.toString());
                 return res.status(500).json({ status: err.toString() });
             }
-            res.status(200).json({ status: 'ok' });
+            res.json({ status: 'ok' });
         });
         /** MAZE ROUTES **/
         app.get('/mazes', (req, res) => {
             log.trace(__filename, req.url, 'Sending list of mazes.');
-            res.status(200).json(mazeList);
+            res.json(mazeList);
         });
         app.get('/maze/:mazeId', (req, res) => {
             log.trace(__filename, req.url, 'Searching for MazeID ' + req.params.mazeId);
             try {
                 let maze = findMaze(req.params.mazeId);
-                res.status(200).json(maze);
+                res.json(maze);
             }
             catch (err) {
                 res.status(404).json({ status: 'Maze Not Found: ' + req.params.mazeId });
@@ -424,13 +422,13 @@ function startServer() {
         /** TEAM ROUTES **/
         app.get('/teams', (req, res) => {
             log.trace(__filename, req.url, 'Sending list of teams.');
-            res.status(200).json(teams);
+            res.json(teams);
         });
         app.get('/team', (req, res) => {
             log.trace(__filename, req.url, 'Searching for TeamID ' + req.params.teamId);
             try {
                 let team = findTeam(req.params.teamId);
-                res.status(200).json(team);
+                res.json(team);
             }
             catch (err) {
                 res.status(404).json({ status: 'Team Not Found: ' + req.params.mazeId });
@@ -439,16 +437,12 @@ function startServer() {
         /** SCORE ROUTES **/
         app.get('/scores', (req, res) => {
             log.trace(__filename, req.url, 'Sending list of scores.');
-            res.status(200).json(scoreList);
+            res.json(scoreList);
         });
         // Bad Routes
         app.get('/*', function (req, res) {
             log.trace(__filename, req.url, 'Bad route - rendering index.');
-            res.render('index', {
-                contentType: 'text/html',
-                responseCode: 404,
-                host: req.headers.host
-            });
+            res.status(404).render('index', { host: req.headers.host });
         });
     });
 }

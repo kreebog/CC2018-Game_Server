@@ -7,130 +7,113 @@ html
         table(class='table table-striped table-dark table-hover' style='color:antiquewhite')
             th(scope='col') Link
             th(scope='col') Method
-            th(scope='col') Action
             th(scope='col') Type
             th(scope='col') Arguments
             th(scope='col') Return
-            th(scope='col') Status
             th(scope='col') Description
             tr
-                td(class='td-left')
-                    a(href= 'http://' + host) This Page
+                td.text-nowrap
+                    a(href= 'http://' + host + '/game/new/10:10:SlipperyDevil/b451bb96-f32a-48be-9efd-5f82cd900b66') Create Game
                 td Get
-                td Get
-                td HTML 
-                td(class='td-left') N/A
-                td(class='td-left') API Documentation
-                td Current
-                td(class='td-left') Returns this document.
+                td
+                    h1.badge.badge-primary JSON
+                td MazeId, TeamId
+                td Game Data
+                td.text-left Creates new (or finds existing) game session and returns link to game data.
             tr
-                td(class='td-left')
-                    a(href= 'http://' + host + '/games') Get Games
-                td Get
-                td Get
-                td JSON 
-                td(class='td-left') N/A
-                td(class='td-left') Game Data
-                td Current
-                td(class='td-left') Returns Game Data for all active games.
-            tr
-                td(class='td-left')
-                    a(href= 'http://' + host + '/games/list') List Games
-                td Get
-                td Get
-                td HTML
-                td(class='td-left') N/A
-                td(class='td-left') HTML List of Games
-                td Current
-                td(class='td-left') Returns a spiffy HTML list of active games.
-            tr
-                td(class='td-left')
+                td.text-nowrap
                     a(href= 'http://' + host + '/game/625a0dbb-011d-4eb2-98f9-9c5a6775ad89') Get Game
                 td Get
-                td Get
-                td JSON 
-                td(class='td-left') GameId (GUID)
-                td(class='td-left') A single game object as JSON.
-                td Current
-                td(class='td-left') Returns an active game with the matching GameID GUID. 
+                td
+                    h1.badge.badge-primary JSON
+                td GameId (GUID)
+                td Game Data
+                td.text-left Returns game with matching GameID or 402 if not found.
             tr
-                td(class='td-left')
-                    a(href= 'http://' + host + '/game/new/10:10:SlipperyDevil/b451bb96-f32a-48be-9efd-5f82cd900b66') New Game
+                td.text-nowrap
+                    a(href= 'http://' + host + '/games') Get Games
                 td Get
-                td Get
-                td JSON 
-                td(class='td-left') MazeId/TeamId
-                td(class='td-left') Game Data
-                td Current
-                td(class='td-left') Returns the game data for a new game session, or redirects to /get/GameID if team already has a game underway
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Game Data Stubs
+                td.text-left Returns Game Data for all active games.
             tr
-                td(class='td-left')
-                    a(href= 'http://' + host + '/mazes') List Mazes
+                td.text-nowrap
+                    a(href= 'http://' + host + '/games/list') List Games
                 td Get
-                td Get
-                td JSON 
-                td(class='td-left') N/A
-                td(class='td-left') List of Maze Data
-                td Current
-                td(class='td-left') Returns the list of Mazes (stubbed data) available on the server 
+                td
+                    h1.badge.badge-success HTML
+                td N/A
+                td List of Games
+                td.text-left Returns a spiffy HTML list of active games.
             tr
-                td(class='td-left')
+                td.text-nowrap
                     a(href= 'http://' + host + '/maze/10:15:SimpleSample') Get Maze
                 td Get
-                td Get
-                td JSON 
-                td(class='td-left') MazeId (H:W:Seed)
-                td(class='td-left') Maze Data
-                td Current
-                td(class='td-left') Returns the maze data for a single maze with the given MazeId
+                td
+                    h1.badge.badge-primary JSON
+                td MazeId (H:W:Seed)
+                td Maze Data
+                td.text-left Returns Maze from cache, 402 if not found
             tr
-                td(class='td-left')
-                    a(href= 'http://maze.code-camp-2018.com/list') List Mazes
+                td.text-nowrap
+                    a(href= 'http://' + host + '/mazes') Get Mazes
                 td Get
-                td Get
-                td HTML
-                td(class='td-left') N/A
-                td(class='td-left') List of Mazes
-                td Current
-                td(class='td-left') Returns an HTML list of mazes
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Maze Data Stubs
+                td.text-left Returns list of Maze Stubs available in cache
             tr
-                td(class='td-left')
+                td.text-nowrap
+                    a(href= 'http://maze.code-camp-2018.com/list' target='_blank') List Mazes
+                td Get
+                td
+                    h1.badge.badge-success HTML
+                    |&nbsp;
+                    h1.badge.badge-warning EXT
+                td N/A
+                td List of Mazes
+                td.text-left Links to Maze Service /list
+            tr
+                td.text-nowrap
                     a(href= 'http://' + host + '/teams') Get Teams
                 td Get
-                td Get
-                td JSON 
-                td(class='td-left') N/A
-                td(class='td-left') List of Team Data
-                td Current
-                td(class='td-left') Returns all Teams
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Team Data
+                td.text-left Returns all Teams in cache
             tr
-                td(class='td-left')
-                    a(href= 'http://team.code-camp-2018.com/list') List Teams
+                td.text-nowrap
+                    a(href= 'http://team.code-camp-2018.com/list' target='_blank') List Teams
                 td Get
-                td Get
-                td HTML
-                td(class='td-left') N/A
-                td(class='td-left') List of Teams
-                td Current
-                td(class='td-left') Returns an HTML List of Teams
+                td
+                    h1.badge.badge-success HTML
+                    |&nbsp;
+                    h1.badge.badge-warning EXT
+                td N/A
+                td List of Teams
+                td.text-left Links to Team Service /list
             tr
-                td(class='td-left')
+                td.text-nowrap
                     a(href= 'http://' + host + '/scores') Get Scores
                 td Get
-                td Get
-                td JSON 
-                td(class='td-left') N/A
-                td(class='td-left') List of Score Data
-                td Current
-                td(class='td-left') Returns all Scores
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Score Data
+                td.text-left Returns all Scores
             tr
-                td(class='td-left')
-                    a(href= 'http://score.code-camp-2018.com/list') List Scores
+                td.text-nowrap
+                    a(href= 'http://score.code-camp-2018.com/list' target='_blank') List Scores
                 td Get
-                td Get
-                td HTML
-                td(class='td-left') N/A
-                td(class='td-left') List of Scores
-                td Current
-                td(class='td-left') Returns an HTML List of Scores
+                td.text-nowrap
+                    h1.badge.badge-success HTML
+                    |&nbsp;
+                    h1.badge.badge-warning EXT
+                td N/A
+                td List of Scores
+                td.text-left Returns an HTML List of Scores
     include foot.pug

@@ -20,7 +20,7 @@
     "homepage": "https://github.com/kreebog/CC2018-Game_Server#readme",
     "dependencies": {
         "@types/request": "^2.47.1",
-        "cc2018-ts-lib": "^1.4.2",
+        "cc2018-ts-lib": "^1.4.21",
         "compression": "^1.7.2",
         "dotenv": "^6.0.0",
         "express": "^4.16.3",
