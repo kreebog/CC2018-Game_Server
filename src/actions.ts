@@ -1,11 +1,11 @@
 import { format } from 'util';
-import { Enums, DIRS, Cell, IEngram } from 'cc2018-ts-lib';
+import { Enums, DIRS, ICell, IEngram } from 'cc2018-ts-lib';
 let enums = Enums.getInstance();
 
-export function doLook(cell: Cell, dir: DIRS): IEngram {
-    let engram: IEngram = { cell: cell.toJSON(), sight: '', sound: '', smell: '', touch: '', taste: '' };
+export function doLook(cell: ICell, dir: DIRS): IEngram {
+    let engram: IEngram = { cell: cell, sight: '', sound: '', smell: '', touch: '', taste: '' };
 
-    let exits = enums.getSelectedBitNames(DIRS, cell.getExits());
+    let exits = enums.getSelectedBitNames(DIRS, cell.exits);
 
     engram.sight = format('You see %s to the', exits.length > 1 ? 's' : '');
     exits.forEach(exit => {

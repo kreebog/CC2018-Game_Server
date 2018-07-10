@@ -4,8 +4,8 @@ const util_1 = require("util");
 const cc2018_ts_lib_1 = require("cc2018-ts-lib");
 let enums = cc2018_ts_lib_1.Enums.getInstance();
 function doLook(cell, dir) {
-    let engram = { cell: cell.toJSON(), sight: '', sound: '', smell: '', touch: '', taste: '' };
-    let exits = enums.getSelectedBitNames(cc2018_ts_lib_1.DIRS, cell.getExits());
+    let engram = { cell: cell, sight: '', sound: '', smell: '', touch: '', taste: '' };
+    let exits = enums.getSelectedBitNames(cc2018_ts_lib_1.DIRS, cell.exits);
     engram.sight = util_1.format('You see %s to the', exits.length > 1 ? 's' : '');
     exits.forEach(exit => {
         engram.sight.concat(' ' + exit);

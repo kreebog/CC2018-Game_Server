@@ -148,7 +148,7 @@ function bootstrap() {
  *
  * @param gameId
  */
-function findGame(gameId: string): Game {
+function getGame(gameId: string): Game {
     for (let n = 0; n < games.length; n++) {
         if (games[n].getId() == gameId) {
             return games[n];
@@ -160,19 +160,32 @@ function findGame(gameId: string): Game {
 }
 
 /**
+ * Find and return the game with the matching ID
+ *
+ * @param gameId
+ */
+function isGameInProgress(gameId: string): boolean {
+    for (let n = 0; n < games.length; n++) {
+        if (games[n].getId() == gameId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Quickly find and return the game id for the first game
  * in progress for the given team
  *
  * @param teamId
  */
-function findGameInProgress(teamId: string): string {
+function getGameIdByTeam(teamId: string): string {
     for (let n = 0; n < games.length; n++) {
         if (games[n].getTeam().getId() == teamId) {
-            log.debug(__filename, 'findGameInProgress()', 'Game found: ' + games[n].getId());
+            log.debug(__filename, 'findGameByTeam()', 'Game found: ' + games[n].getId());
             return games[n].getId();
         }
     }
-
     return '';
 }
 
@@ -272,7 +285,7 @@ function startServer() {
             let game: Game;
 
             try {
-                game = findGame(gameId);
+                game = getGame(gameId);
                 res.json(game);
             } catch {
                 res.status(404).json({ status: format('Game [%s] not found.', gameId) });
@@ -286,7 +299,8 @@ function startServer() {
             log.debug(__filename, req.url, 'Returning list of active games (stub data).');
 
             if (games.length == 0) {
-                res.status(204).json({ status: 'No games found.' });
+                // 204 (No Content) returns no message body
+                res.json({ status: 'No games found.' });
             } else {
                 let data = new Array();
                 for (let n = 0; n < games.length; n++) {
@@ -316,19 +330,27 @@ function startServer() {
 
         /**
          * Attempts to create a new game using the given Team and Maze
-         * -- If team is already in a game, redirects to /get/GameID
+         * -- If team is already in a game, 400 + status:already running
          * -- If team or maze not found, returns error.
+         * -- passing /gameId attempts to force the game ID value - useful for testing
          */
-        app.get('/game/new/:mazeId/:teamId', function(req, res) {
+
+        app.get(['/game/new/:mazeId/:teamId', '/game/new/:mazeId/:teamId/:forcedGameId'], function(req, res) {
             try {
                 // create and return a new game against the given maze
                 let teamId = req.params.teamId;
-                let gameId = findGameInProgress(teamId);
+                let gameId = getGameIdByTeam(teamId);
+                let forcedGameId = req.params.forcedGameId !== undefined ? req.params.forcedGameId : '';
                 let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
 
                 if (gameId != '') {
-                    log.debug(__filename, req.url, format('Redirecting to /get/gameId - Team %s already in game %s.', teamId, gameId));
-                    return res.json({ status: 'Game already runnning.', url: gameUrl + gameId });
+                    log.debug(__filename, req.url, format('Team %s already in game %s.', teamId, gameId));
+                    return res.status(400).json({ status: format('Team %s in game %s. %s.', teamId, gameId), url: gameUrl + gameId });
+                }
+
+                if (forcedGameId != '' && isGameInProgress(forcedGameId)) {
+                    log.debug(__filename, req.url, format('Game %s already running.', forcedGameId));
+                    return res.status(400).json({ status: format('Game %s already running.', forcedGameId), url: gameUrl + forcedGameId });
                 }
 
                 let maze: IMaze = findMaze(req.params.mazeId);
@@ -337,6 +359,12 @@ function startServer() {
                 let team: Team = new Team(teamStub);
                 if (team) {
                     let game: Game = new Game(maze, team, score);
+
+                    if (forcedGameId != '') {
+                        log.warn(__filename, req.url, 'New Game(): ID generation overridden with: ' + forcedGameId);
+                        game.forceSetId(forcedGameId);
+                    }
+
                     games.push(game);
                     res.json({ status: 'Game created.', url: gameUrl + game.getId() });
                     log.info(__filename, req.url, 'New game added to games list: ' + game.getId());
@@ -368,7 +396,7 @@ function startServer() {
                     throw new Error(format('Invalid Direction: %s.  Valid directions are NONE, NORTH, SOUTH, EAST, and WEST', req.params.direction));
                 }
 
-                let game: Game = findGame(gameId); // will throw error if game not found - drops to catch block
+                let game: Game = getGame(gameId); // will throw error if game not found - drops to catch block
 
                 res.json({ status: format('Move %s completed.', argDir) });
             } catch (err) {
@@ -398,9 +426,11 @@ function startServer() {
                 let argDir: any = format('%s', req.query.dir).toUpperCase();
 
                 let dir: number = parseInt(DIRS[argDir]); // value will be NaN if not a valid direction name
-                let game: Game = findGame(gameId); // will throw error if game not found - drops to catch block
+                let game: Game = getGame(gameId); // will throw error if game not found - drops to catch block
                 let maze: Maze = new Maze(game.getMaze());
-                let cell: Cell = maze.getCell(game.getPlayerPos().row, game.getPlayerPos().col);
+
+                // can't get an active cell object out of maze.getCell() for some reason - have to do this funky reparse to cast to ICell
+                let cell: ICell = maze.getICell(game.getPlayerPos().row, game.getPlayerPos().col);
 
                 switch (argAct) {
                     case 'MOVE':
@@ -408,9 +438,9 @@ function startServer() {
 
                         if (game.isOpenDir(dir)) {
                             game.doMove(dir);
-                            console.log("NOPE CAN't GO THAT WAY!");
+                            console.log('BOOM FALL DOWN!');
                         } else {
-                            console.log("NOPE CAN't GO THAT WAY!");
+                            console.log('BOOM FALL DOWN!');
                         }
 
                         break;
@@ -479,7 +509,7 @@ function startServer() {
 
         // HOME PAGE
         app.get(['/', '/index'], function(req, res) {
-            res.status(200).render('index');
+            res.render('index', { extUrl: consts.GAME_SVC_EXT_URL });
         });
 
         // Bad Routes
