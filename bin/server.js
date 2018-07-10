@@ -261,8 +261,7 @@ function startServer() {
         app.get('/games', function (req, res) {
             log.debug(__filename, req.url, 'Returning list of active games (stub data).');
             if (games.length == 0) {
-                // response code 204 (NO CONTENT)
-                res.status(204).send();
+                res.status(204).json({ status: 'No games found.' });
             }
             else {
                 let data = new Array();
@@ -345,8 +344,8 @@ function startServer() {
             }
         });
         /**
-         * Performs an action (MOVE, LOOK, JUMP, WRITE, SAY)
-         * Format: /game/action/<gameId>?act=[move|look|jump|write|say]&arg1=[direction|message]
+         * Performs an action (MOVE, LOOK, JUMP, MARK)
+         * Format: /game/action/<gameId>?act=[move|look|jump|mark]&[dir|msg]=[direction|message]
          *
          * Returns the results of the action and an engram describing
          * new state.
@@ -356,7 +355,7 @@ function startServer() {
                 // make sure we have the right arguments
                 if (req.query.act === undefined || req.params.gameId === undefined) {
                     return res.status(400).json({
-                        status: 'Missing querystring argument(s). Format=?act=[move|look|jump|write|say] [&dir=<none|north|south|east|west>] [&message=text]'
+                        status: 'Missing querystring argument(s). Format=?act=[move|look|jump|mark] [&dir=<none|north|south|east|west>] [&message=text]'
                     });
                 }
                 let gameId = req.params.gameId;
@@ -441,8 +440,8 @@ function startServer() {
         });
         // Bad Routes
         app.get('/*', function (req, res) {
-            log.trace(__filename, req.url, 'Bad route - rendering index.');
-            res.status(404).render('index', { host: req.headers.host });
+            log.trace(__filename, req.url, 'Bad route - returning 404.');
+            res.status(404).json({ status: 'Page not found.' });
         });
     });
 }
