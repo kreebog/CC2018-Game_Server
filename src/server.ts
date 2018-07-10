@@ -478,6 +478,11 @@ function startServer() {
         });
 
         // Bad Routes
+        app.get('/index', function(req, res) {
+            res.status(200).render('index');
+        });
+
+        // Bad Routes
         app.get('/*', function(req, res) {
             log.trace(__filename, req.url, 'Bad route - returning 404.');
             res.status(404).json({ status: 'Page not found.' });
