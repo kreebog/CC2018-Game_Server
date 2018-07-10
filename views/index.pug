@@ -13,22 +13,31 @@ html
             th(scope='col') Description
             tr
                 td.text-nowrap
-                    a(href= extUrl + '/game/new/10:10:SlipperyDevil/b451bb96-f32a-48be-9efd-5f82cd900b66') Create Game
+                    a(href= extUrl + '/game/new/10:10:SlipperyDevil/b451bb96-f32a-48be-9efd-5f82cd900b66/ForcedId0001') Create Game
                 td Get
                 td
                     h1.badge.badge-primary JSON
                 td MazeId, TeamId
-                td Game Data
+                td JSON Status Message
                 td.text-left Creates new (or finds existing) game session and returns link to game data.
             tr
                 td.text-nowrap
-                    a(href= extUrl + '/game/625a0dbb-011d-4eb2-98f9-9c5a6775ad89') Get Game
+                    a(href= extUrl + '/game/ForcedId0001') Get Game
                 td Get
                 td
                     h1.badge.badge-primary JSON
                 td GameId (GUID)
                 td Game Data
-                td.text-left Returns game with matching GameID or 402 if not found.
+                td.text-left Returns game with matching GameID, or status message if not found.
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/game/abort/ForcedId0001') Abort Game
+                td Get
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td JSON Status Message
+                td.text-left Sets GAME_STATE to ABANDONED on the given game, if found.
             tr
                 td.text-nowrap
                     a(href= extUrl + '/games') Get Games

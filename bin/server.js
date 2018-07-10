@@ -167,17 +167,30 @@ function isGameInProgress(gameId) {
     }
     return false;
 }
+function abortGame(gameId) {
+    for (let n = 0; n < games.length; n++) {
+        if (games[n].getId() == gameId) {
+            games[n].setState(cc2018_ts_lib_2.GAME_STATES.ABORTED);
+            // allow the game ID to be reused at some point
+            games[n].forceSetId('_dead' + games[n].getId());
+        }
+    }
+}
 /**
  * Quickly find and return the game id for the first game
  * in progress for the given team
  *
  * @param teamId
  */
-function getGameIdByTeam(teamId) {
+function getActiveGameIdByTeam(teamId) {
     for (let n = 0; n < games.length; n++) {
-        if (games[n].getTeam().getId() == teamId) {
-            log.debug(__filename, 'findGameByTeam()', 'Game found: ' + games[n].getId());
-            return games[n].getId();
+        let g = games[n];
+        if (g.getTeam().getId() == teamId) {
+            let gs = g.getState();
+            if (!!(gs & cc2018_ts_lib_2.GAME_STATES.NEW) || !!(gs & cc2018_ts_lib_2.GAME_STATES.IN_PROGRESS) || !!(gs & cc2018_ts_lib_2.GAME_STATES.WAIT_BOT) || !!(gs & cc2018_ts_lib_2.GAME_STATES.WAIT_TEAM)) {
+                log.debug(__filename, 'getActiveGameIdByTeam()', 'Game found: ' + games[n].getId());
+                return games[n].getId();
+            }
         }
     }
     return '';
@@ -269,36 +282,50 @@ function startServer() {
             }
         });
         /**
-         * Sends JSON list of all current games with url to full /get/GameId link
+         * Sends JSON list of all current, active games with url to full /get/GameId link
          */
         app.get('/games', function (req, res) {
             log.debug(__filename, req.url, 'Returning list of active games (stub data).');
-            if (games.length == 0) {
-                // 204 (No Content) returns no message body
-                res.json({ status: 'No games found.' });
-            }
-            else {
+            if (games.length > 0) {
                 let data = new Array();
+                // only return active games
                 for (let n = 0; n < games.length; n++) {
-                    let stub = {
-                        gameId: games[n].getId(),
-                        team: games[n].getTeam().toJSON(),
-                        gameState: games[n].getState(),
-                        score: games[n].getScore().toJSON(),
-                        mazeStub: new cc2018_ts_lib_1.Maze(games[n].getMaze()).getMazeStub(),
-                        url: util_1.format('%s/%s/%s', consts.GAME_SVC_EXT_URL, 'game', games[n].getId())
-                    };
-                    data.push(stub);
+                    if (!!(games[n].getState() & cc2018_ts_lib_2.GAME_STATES.IN_PROGRESS) || !!(games[n].getState() & cc2018_ts_lib_2.GAME_STATES.NEW) || !!(games[n].getState() & cc2018_ts_lib_2.GAME_STATES.WAIT_BOT) || !!(games[n].getState() & cc2018_ts_lib_2.GAME_STATES.WAIT_TEAM)) {
+                        let stub = {
+                            gameId: games[n].getId(),
+                            team: games[n].getTeam().toJSON(),
+                            gameState: games[n].getState(),
+                            score: games[n].getScore().toJSON(),
+                            mazeStub: new cc2018_ts_lib_1.Maze(games[n].getMaze()).getMazeStub(),
+                            url: util_1.format('%s/%s/%s', consts.GAME_SVC_EXT_URL, 'game', games[n].getId())
+                        };
+                        data.push(stub);
+                    }
                 }
-                res.json(data);
+                if (data.length > 0) {
+                    res.json(data);
+                }
+                else {
+                    res.json({ status: 'No games found.' });
+                }
             }
         });
         /**
-         * Renders an HTML list of games
+         * Renders an HTML list of all games, all states
          */
         app.get('/games/list', function (req, res) {
             log.debug(__filename, req.url, 'Rendering list of active games.');
             res.render('list', { games: games });
+        });
+        app.get('/game/abort/:gameId', function (req, res) {
+            let gameId = req.params.gameId;
+            if (!isGameInProgress(gameId)) {
+                res.json({ status: 'Game not current running:' + gameId });
+            }
+            else {
+                abortGame(gameId);
+                res.json({ status: 'Game aborted:' + gameId });
+            }
         });
         /**
          * Attempts to create a new game using the given Team and Maze
@@ -310,12 +337,12 @@ function startServer() {
             try {
                 // create and return a new game against the given maze
                 let teamId = req.params.teamId;
-                let gameId = getGameIdByTeam(teamId);
+                let gameId = getActiveGameIdByTeam(teamId);
                 let forcedGameId = req.params.forcedGameId !== undefined ? req.params.forcedGameId : '';
                 let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
                 if (gameId != '') {
                     log.debug(__filename, req.url, util_1.format('Team %s already in game %s.', teamId, gameId));
-                    return res.status(400).json({ status: util_1.format('Team %s in game %s. %s.', teamId, gameId), url: gameUrl + gameId });
+                    return res.status(400).json({ status: util_1.format('Team %s already in game %s.', teamId, gameId), url: gameUrl + gameId });
                 }
                 if (forcedGameId != '' && isGameInProgress(forcedGameId)) {
                     log.debug(__filename, req.url, util_1.format('Game %s already running.', forcedGameId));
@@ -327,6 +354,7 @@ function startServer() {
                 let team = new cc2018_ts_lib_1.Team(teamStub);
                 if (team) {
                     let game = new cc2018_ts_lib_1.Game(maze, team, score);
+                    game.setState(cc2018_ts_lib_2.GAME_STATES.NEW);
                     if (forcedGameId != '') {
                         log.warn(__filename, req.url, 'New Game(): ID generation overridden with: ' + forcedGameId);
                         game.forceSetId(forcedGameId);
@@ -344,7 +372,7 @@ function startServer() {
             }
             catch (err) {
                 log.error(__filename, req.url, 'Error creating game: ' + err.toString());
-                res.status(404).json({ status: util_1.format('Error creating game: %s', err.toString()) });
+                res.status(500).json({ status: util_1.format('Error creating game: %s', err.toString()) });
             }
         });
         // move the team's AI in the given direction (if possible)
@@ -395,7 +423,6 @@ function startServer() {
                         if (isNaN(dir))
                             return res.status(400).json({ status: 'Invalid direction.' });
                         if (game.isOpenDir(dir)) {
-                            game.doMove(dir);
                             console.log('BOOM FALL DOWN!');
                         }
                         else {
