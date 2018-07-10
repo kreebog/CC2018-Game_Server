@@ -477,8 +477,8 @@ function startServer() {
             res.json(scoreList);
         });
 
-        // Bad Routes
-        app.get('/index', function(req, res) {
+        // HOME PAGE
+        app.get(['/', '/index'], function(req, res) {
             res.status(200).render('index');
         });
 

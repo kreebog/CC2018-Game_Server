@@ -438,8 +438,8 @@ function startServer() {
             log.trace(__filename, req.url, 'Sending list of scores.');
             res.json(scoreList);
         });
-        // Bad Routes
-        app.get('/index', function (req, res) {
+        // HOME PAGE
+        app.get(['/', '/index'], function (req, res) {
             res.status(200).render('index');
         });
         // Bad Routes
