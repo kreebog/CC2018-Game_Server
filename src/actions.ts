@@ -25,13 +25,21 @@ export function doLook(game: Game, dir: DIRS, action: IAction) {
     } else {
         if (cell.isDirOpen(dir)) {
             if (dir == DIRS.NORTH && !!(cell.getTags() & TAGS.START)) {
-                action.engram.sight = format("You gaze longingly at the entrance to the %s, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!", dirName);
+                action.engram.sight = format(
+                    "You gaze longingly at the entrance to the %s, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!",
+                    dirName
+                );
                 game.getTeam().addTrophy(TROPHY_IDS.WISHFUL_THINKING);
                 action.outcome.push('Trophy Earned: ' + TROPHY_IDS[TROPHY_IDS.WISHFUL_THINKING]);
             } else {
                 let targetCell: Cell = game.getMaze().getCellNeighbor(cell, dir);
                 let exitString: string = getExitString(targetCell.getExits());
-                action.engram.sight = format('Just to the %s, you see a room with %s to the %s.', dirName, exitString.indexOf('and') < 0 ? 'an exit' : 'exits', getExitString(targetCell.getExits()));
+                action.engram.sight = format(
+                    'Just to the %s, you see a room with %s to the %s.',
+                    dirName,
+                    exitString.indexOf('and') < 0 ? 'an exit' : 'exits',
+                    getExitString(targetCell.getExits())
+                );
             }
         } else {
             action.engram.sight = format('You stare intently at the wall to the %s and wonder why you wasted a turn.', dirName);
@@ -77,10 +85,15 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
                 action.engram.taste = format('The last thing you taste is lava. It tastes like chicken.');
                 game.getTeam().addTrophy(TROPHY_IDS.WISHFUL_DYING);
                 action.outcome.push('Trophy Earned: ' + TROPHY_IDS[TROPHY_IDS.WISHFUL_DYING]);
-                action.outcome.push("You turn north and try to walk out through the maze entrance, but it's filled with lava. We told you it would be.  At least your death is mercifully quick.");
+                action.outcome.push(
+                    "You turn north and try to walk out through the maze entrance, but it's filled with lava. We told you it would be.  At least your death is mercifully quick."
+                );
                 action.outcome.push('YOU HAVE DIED');
+
+                // game over - server function will handle saving and cleanup
                 game.setResult(GAME_RESULTS.DEATH_LAVA);
                 game.setState(GAME_STATES.FINISHED);
+                game.getPlayer().addState(PLAYER_STATES.DEAD);
                 return;
             } else {
                 let targetCell: Cell = game.getMaze().getCellNeighbor(cell, dir);

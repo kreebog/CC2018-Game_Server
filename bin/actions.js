@@ -78,8 +78,10 @@ function doMove(game, dir, action) {
                 action.outcome.push('Trophy Earned: ' + Enums_1.TROPHY_IDS[Enums_1.TROPHY_IDS.WISHFUL_DYING]);
                 action.outcome.push("You turn north and try to walk out through the maze entrance, but it's filled with lava. We told you it would be.  At least your death is mercifully quick.");
                 action.outcome.push('YOU HAVE DIED');
+                // game over - server function will handle saving and cleanup
                 game.setResult(Enums_1.GAME_RESULTS.DEATH_LAVA);
                 game.setState(Enums_1.GAME_STATES.FINISHED);
+                game.getPlayer().addState(Enums_1.PLAYER_STATES.DEAD);
                 return;
             }
             else {
