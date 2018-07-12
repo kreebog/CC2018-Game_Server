@@ -25,21 +25,13 @@ export function doLook(game: Game, dir: DIRS, action: IAction) {
     } else {
         if (cell.isDirOpen(dir)) {
             if (dir == DIRS.NORTH && !!(cell.getTags() & TAGS.START)) {
-                action.engram.sight = format(
-                    "You gaze longingly at the entrance to the %s, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!",
-                    dirName
-                );
+                action.engram.sight = format("You gaze longingly at the entrance to the %s, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!", dirName);
                 game.getTeam().addTrophy(TROPHY_IDS.WISHFUL_THINKING);
                 action.outcome.push('Trophy Earned: ' + TROPHY_IDS[TROPHY_IDS.WISHFUL_THINKING]);
             } else {
                 let targetCell: Cell = game.getMaze().getCellNeighbor(cell, dir);
                 let exitString: string = getExitString(targetCell.getExits());
-                action.engram.sight = format(
-                    'Just to the %s, you see a room with %s to the %s.',
-                    dirName,
-                    exitString.indexOf('and') < 0 ? 'an exit' : 'exits',
-                    getExitString(targetCell.getExits())
-                );
+                action.engram.sight = format('Just to the %s, you see a room with %s to the %s.', dirName, exitString.indexOf('and') < 0 ? 'an exit' : 'exits', getExitString(targetCell.getExits()));
             }
         } else {
             action.engram.sight = format('You stare intently at the wall to the %s and wonder why you wasted a turn.', dirName);
@@ -85,15 +77,36 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
                 action.engram.taste = format('The last thing you taste is lava. It tastes like chicken.');
                 game.getTeam().addTrophy(TROPHY_IDS.WISHFUL_DYING);
                 action.outcome.push('Trophy Earned: ' + TROPHY_IDS[TROPHY_IDS.WISHFUL_DYING]);
-                action.outcome.push(
-                    "You turn north and try to walk out through the maze entrance, but it's filled with lava. We told you it would be.  At least your death is mercifully quick."
-                );
+                action.outcome.push("You turn north and try to walk out through the maze entrance, but it's filled with lava. We told you it would be. At least your death is mercifully quick.");
                 action.outcome.push('YOU HAVE DIED');
 
                 // game over - server function will handle saving and cleanup
+                game.getScore().addMove();
                 game.setResult(GAME_RESULTS.DEATH_LAVA);
                 game.setState(GAME_STATES.FINISHED);
                 game.getPlayer().addState(PLAYER_STATES.DEAD);
+                return;
+            } else if (dir == DIRS.SOUTH && !!(cell.getTags() & TAGS.FINISH)) {
+                game.getScore().addMove();
+                action.engram.touch = format('The cool air of the lab washes over your tired body as you safely exit the maze.');
+                action.engram.sight = format('The cold, harsh lights of the lab are almost blinding, but you see the shadow of a giant approaching.');
+                action.engram.sound = format('The cheering and applause of the scientest is so loud that it hurts your ears.');
+                action.engram.smell = format("Your nose twitches as it's assaulted by the smells of iodine, rubbing alcohol, betadine, and caramel-mocha frappuccino.");
+                action.engram.taste = format('You can already taste the cheese that you know is waiting for you in your cage!');
+                game.getTeam().addTrophy(TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER);
+                action.outcome.push('Trophy Earned: ' + TROPHY_IDS[TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER]);
+                action.outcome.push(format('Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientest gently picks you up and carries you back to your cage.', game.getMaze().getSeed(), game.getScore().getMoveCount()));
+                if (game.getMaze().getShortestPathLength() == game.getScore().getMoveCount()) {
+                    game.getTeam().addTrophy(TROPHY_IDS.PERFECT_RUN);
+                    action.outcome.push('Trophy Earned: ' + TROPHY_IDS[TROPHY_IDS.PERFECT_RUN]);
+                    action.outcome.push(format("You just had a PERFECT RUN through %s! Are your whisker smoking? Why don't you move on to something harder..."));
+                }
+
+                action.outcome.push('YOU WIN');
+
+                // game over - server function will handle saving and cleanup
+                game.setResult(GAME_RESULTS.WIN);
+                game.setState(GAME_STATES.FINISHED);
                 return;
             } else {
                 let targetCell: Cell = game.getMaze().getCellNeighbor(cell, dir);
@@ -133,7 +146,7 @@ export function doStand(player: Player) {
     if (!!(player.State & PLAYER_STATES.SITTING)) {
         player.removeState(PLAYER_STATES.SITTING);
         player.addState(PLAYER_STATES.STANDING);
-        return 'You sit up';
+        return 'You sit up.';
     }
 
     if (!!(player.State & PLAYER_STATES.LYING)) {

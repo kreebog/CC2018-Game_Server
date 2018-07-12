@@ -76,12 +76,34 @@ function doMove(game, dir, action) {
                 action.engram.taste = util_1.format('The last thing you taste is lava. It tastes like chicken.');
                 game.getTeam().addTrophy(Enums_1.TROPHY_IDS.WISHFUL_DYING);
                 action.outcome.push('Trophy Earned: ' + Enums_1.TROPHY_IDS[Enums_1.TROPHY_IDS.WISHFUL_DYING]);
-                action.outcome.push("You turn north and try to walk out through the maze entrance, but it's filled with lava. We told you it would be.  At least your death is mercifully quick.");
+                action.outcome.push("You turn north and try to walk out through the maze entrance, but it's filled with lava. We told you it would be. At least your death is mercifully quick.");
                 action.outcome.push('YOU HAVE DIED');
                 // game over - server function will handle saving and cleanup
+                game.getScore().addMove();
                 game.setResult(Enums_1.GAME_RESULTS.DEATH_LAVA);
                 game.setState(Enums_1.GAME_STATES.FINISHED);
                 game.getPlayer().addState(Enums_1.PLAYER_STATES.DEAD);
+                return;
+            }
+            else if (dir == cc2018_ts_lib_1.DIRS.SOUTH && !!(cell.getTags() & Enums_1.TAGS.FINISH)) {
+                game.getScore().addMove();
+                action.engram.touch = util_1.format('The cool air of the lab washes over your tired body as you safely exit the maze.');
+                action.engram.sight = util_1.format('The cold, harsh lights of the lab are almost blinding, but you see the shadow of a giant approaching.');
+                action.engram.sound = util_1.format('The cheering and applause of the scientest is so loud that it hurts your ears.');
+                action.engram.smell = util_1.format("Your nose twitches as it's assaulted by the smells of iodine, rubbing alcohol, betadine, and caramel-mocha frappuccino.");
+                action.engram.taste = util_1.format('You can already taste the cheese that you know is waiting for you in your cage!');
+                game.getTeam().addTrophy(Enums_1.TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER);
+                action.outcome.push('Trophy Earned: ' + Enums_1.TROPHY_IDS[Enums_1.TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER]);
+                action.outcome.push(util_1.format('Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientest gently picks you up and carries you back to your cage.', game.getMaze().getSeed(), game.getScore().getMoveCount()));
+                if (game.getMaze().getShortestPathLength() == game.getScore().getMoveCount()) {
+                    game.getTeam().addTrophy(Enums_1.TROPHY_IDS.PERFECT_RUN);
+                    action.outcome.push('Trophy Earned: ' + Enums_1.TROPHY_IDS[Enums_1.TROPHY_IDS.PERFECT_RUN]);
+                    action.outcome.push(util_1.format("You just had a PERFECT RUN through %s! Are your whisker smoking? Why don't you move on to something harder..."));
+                }
+                action.outcome.push('YOU WIN');
+                // game over - server function will handle saving and cleanup
+                game.setResult(Enums_1.GAME_RESULTS.WIN);
+                game.setState(Enums_1.GAME_STATES.FINISHED);
                 return;
             }
             else {
@@ -120,7 +142,7 @@ function doStand(player) {
     if (!!(player.State & Enums_1.PLAYER_STATES.SITTING)) {
         player.removeState(Enums_1.PLAYER_STATES.SITTING);
         player.addState(Enums_1.PLAYER_STATES.STANDING);
-        return 'You sit up';
+        return 'You sit up.';
     }
     if (!!(player.State & Enums_1.PLAYER_STATES.LYING)) {
         player.removeState(Enums_1.PLAYER_STATES.LYING);

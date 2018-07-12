@@ -157,6 +157,19 @@ function getGame(gameId) {
     throw new Error('Game Not Found: ' + gameId);
 }
 /**
+ * Returns true if the gameId is in the games array
+ *
+ * @param gameId
+ */
+function gameExists(gameId) {
+    for (let n = 0; n < games.length; n++) {
+        if (games[n].getId() == gameId) {
+            return true;
+        }
+    }
+    return false;
+}
+/**
  * Find and return the game with the matching ID
  *
  * @param gameId
@@ -174,7 +187,7 @@ function abortGame(gameId) {
         if (games[n].getId() == gameId) {
             games[n].setState(cc2018_ts_lib_3.GAME_STATES.ABORTED);
             // allow the game ID to be reused at some point
-            games[n].forceSetId('_dead' + games[n].getId());
+            games[n].forceSetId('_aborted_' + games[n].getId());
         }
     }
 }
@@ -275,6 +288,9 @@ function startServer() {
             // find game in games array
             let gameId = req.params.gameId;
             let game;
+            if (!gameExists(gameId)) {
+                return res.status(404).json({ status: util_1.format('Game [%s] not found.', gameId) });
+            }
             try {
                 game = getGame(gameId);
                 res.json(game);
@@ -350,8 +366,8 @@ function startServer() {
                 }
                 // check for a forced game id
                 if (forcedGameId != '' && isGameInProgress(forcedGameId)) {
-                    log.debug(__filename, req.url, util_1.format('Game %s already running.', forcedGameId));
-                    return res.status(400).json({ status: util_1.format('Game %s already running.', forcedGameId), url: gameUrl + forcedGameId });
+                    log.debug(__filename, req.url, util_1.format('Game %s already exists - force a different gameId.', forcedGameId));
+                    return res.status(400).json({ status: util_1.format('Game %s already exists - force a differeng gameId.', forcedGameId), url: gameUrl + forcedGameId });
                 }
                 // create the game's objects
                 let maze = findMaze(req.params.mazeId);
@@ -393,26 +409,6 @@ function startServer() {
             catch (err) {
                 log.error(__filename, req.url, 'Error creating game: ' + err.toString());
                 res.status(500).json({ status: util_1.format('Error creating game: %s', err.toString()) });
-            }
-        });
-        // move the team's AI in the given direction (if possible)
-        app.get('/game/action/move/:gameId/:direction', function (req, res) {
-            try {
-                if (req.params.gameId === undefined || req.params.direction === undefined) {
-                    return res.status(400).json({ status: 'Missing argument(s).  Format=/game/action/move/<GameID>/<Direction>' });
-                }
-                let gameId = req.params.gameId;
-                let argDir = util_1.format('%s', req.params.direction).toUpperCase();
-                let dir = parseInt(cc2018_ts_lib_3.DIRS[argDir]); // value will be NaN if not a valid direction name
-                if (isNaN(dir)) {
-                    throw new Error(util_1.format('Invalid Direction: %s.  Valid directions are NONE, NORTH, SOUTH, EAST, and WEST', req.params.direction));
-                }
-                let game = getGame(gameId); // will throw error if game not found - drops to catch block
-                res.json({ status: util_1.format('Move %s completed.', argDir) });
-            }
-            catch (err) {
-                log.error(__filename, req.url, 'Error executing move: ' + err.toString());
-                return res.status(500).json({ status: err.toString() });
             }
         });
         /**
@@ -480,6 +476,9 @@ function startServer() {
                         act.doLook(game, dir, action);
                     }
                 }
+                // refresh some duplicated action values
+                action.score = game.getScore().toJSON();
+                action.location = game.getPlayer().Location;
                 // store the action on the game action stack and return it to the requester as json
                 game.addAction(action);
                 res.json(action);
@@ -502,6 +501,48 @@ function startServer() {
             }
             catch (err) {
                 res.status(404).json({ status: 'Maze Not Found: ' + req.params.mazeId });
+            }
+        });
+        /** ACTION STACK ROUTES */
+        /**
+         * Returns game actions:
+         * ?start=0
+         */
+        app.get('/actions/get/:gameId', (req, res) => {
+            // find game in games array
+            let gameId = req.params.gameId;
+            let game;
+            let start = 0;
+            let count = 0;
+            if (req.query.start !== undefined)
+                start = parseInt(req.query.start + '');
+            if (req.query.count !== undefined)
+                count = parseInt(req.query.count + '');
+            if (!gameExists(gameId)) {
+                return res.status(404).json({ status: util_1.format('Game [%s] not found.', gameId) });
+            }
+            try {
+                game = getGame(gameId);
+                let actCount = game.getActions().length;
+                if (actCount == 0)
+                    return res.json({ status: util_1.format('Game [%s] has no actions.', gameId) });
+                if (actCount < start)
+                    return res.json({ status: util_1.format('There are only %d actions in the list.', actCount) });
+                if (start > 0) {
+                    if (count > 0) {
+                        return res.json(game.getActionsRange(start, count));
+                    }
+                    else {
+                        return res.json(game.getActionsSince(start));
+                    }
+                }
+                else {
+                    return res.json(game.getActions());
+                }
+            }
+            catch (err) {
+                log.error(__filename, req.url, 'Error getting action: ' + err.stack);
+                res.status(404).json({ status: util_1.format('Error getting actions from game [%s]. Bad query? Example: /actions/get/<GAMEID>?start=0&count=50') });
             }
         });
         /** TEAM ROUTES **/
