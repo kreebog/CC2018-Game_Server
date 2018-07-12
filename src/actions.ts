@@ -90,12 +90,12 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
                 game.getScore().addMove();
                 action.engram.touch = format('The cool air of the lab washes over your tired body as you safely exit the maze.');
                 action.engram.sight = format('The cold, harsh lights of the lab are almost blinding, but you see the shadow of a giant approaching.');
-                action.engram.sound = format('The cheering and applause of the scientest is so loud that it hurts your ears.');
+                action.engram.sound = format('The cheering and applause of the scientist is so loud that it hurts your ears.');
                 action.engram.smell = format("Your nose twitches as it's assaulted by the smells of iodine, rubbing alcohol, betadine, and caramel-mocha frappuccino.");
                 action.engram.taste = format('You can already taste the cheese that you know is waiting for you in your cage!');
                 game.getTeam().addTrophy(TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER);
                 action.outcome.push('Trophy Earned: ' + TROPHY_IDS[TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER]);
-                action.outcome.push(format('Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientest gently picks you up and carries you back to your cage.', game.getMaze().getSeed(), game.getScore().getMoveCount()));
+                action.outcome.push(format('Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientist gently picks you up and carries you back to your cage.', game.getMaze().getSeed(), game.getScore().getMoveCount()));
                 if (game.getMaze().getShortestPathLength() == game.getScore().getMoveCount()) {
                     game.getTeam().addTrophy(TROPHY_IDS.PERFECT_RUN);
                     action.outcome.push('Trophy Earned: ' + TROPHY_IDS[TROPHY_IDS.PERFECT_RUN]);
