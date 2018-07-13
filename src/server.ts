@@ -138,10 +138,18 @@ function udpateScoresCache() {
  */
 function bootstrap() {
     if (mazeList.length > 0 && scoreList.length > 0 && teams.length > 0) {
-        log.debug(__filename, 'bootstrap()', format('Caches populated, starting server.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
+        log.debug(
+            __filename,
+            'bootstrap()',
+            format('Caches populated, starting server.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length)
+        );
         startServer(); // start the express server
     } else {
-        log.warn(__filename, 'bootstrap()', format('Maze, Score, and Team lists must be populated.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
+        log.warn(
+            __filename,
+            'bootstrap()',
+            format('Maze, Score, and Team lists must be populated.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length)
+        );
     }
 }
 
@@ -350,11 +358,20 @@ function startServer() {
                         data.push(stub);
                     }
                 }
-            }
 
-            // return what we found
-            if (data.length > 0) {
-                res.json(data);
+                if (data.length > 0) return res.json(data);
+            }
+            res.json({ status: 'No games found.' });
+        });
+
+        /**
+         * Sends JSON list of all current, active games with url to full /get/GameId link
+         */
+        app.get('/games/all', function(req, res) {
+            log.debug(__filename, req.url, 'Returning list of all games (stub data).');
+
+            if (games.length > 0) {
+                res.json(games);
             } else {
                 res.json({ status: 'No games found.' });
             }
@@ -405,7 +422,9 @@ function startServer() {
                 // check for a forced game id
                 if (forcedGameId != '' && isGameInProgress(forcedGameId)) {
                     log.debug(__filename, req.url, format('Game %s already exists - force a different gameId.', forcedGameId));
-                    return res.status(400).json({ status: format('Game %s already exists - force a differeng gameId.', forcedGameId), url: gameUrl + forcedGameId });
+                    return res
+                        .status(400)
+                        .json({ status: format('Game %s already exists - force a differeng gameId.', forcedGameId), url: gameUrl + forcedGameId });
                 }
 
                 // create the game's objects

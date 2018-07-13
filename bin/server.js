@@ -320,10 +320,18 @@ function startServer() {
                         data.push(stub);
                     }
                 }
+                if (data.length > 0)
+                    return res.json(data);
             }
-            // return what we found
-            if (data.length > 0) {
-                res.json(data);
+            res.json({ status: 'No games found.' });
+        });
+        /**
+         * Sends JSON list of all current, active games with url to full /get/GameId link
+         */
+        app.get('/games/all', function (req, res) {
+            log.debug(__filename, req.url, 'Returning list of all games (stub data).');
+            if (games.length > 0) {
+                res.json(games);
             }
             else {
                 res.json({ status: 'No games found.' });
@@ -369,7 +377,9 @@ function startServer() {
                 // check for a forced game id
                 if (forcedGameId != '' && isGameInProgress(forcedGameId)) {
                     log.debug(__filename, req.url, util_1.format('Game %s already exists - force a different gameId.', forcedGameId));
-                    return res.status(400).json({ status: util_1.format('Game %s already exists - force a differeng gameId.', forcedGameId), url: gameUrl + forcedGameId });
+                    return res
+                        .status(400)
+                        .json({ status: util_1.format('Game %s already exists - force a differeng gameId.', forcedGameId), url: gameUrl + forcedGameId });
                 }
                 // create the game's objects
                 let maze = findMaze(req.params.mazeId);
