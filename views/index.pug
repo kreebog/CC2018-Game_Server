@@ -1,0 +1,156 @@
+doctype html
+html
+    include head.pug
+    div(class='container text-center')
+        h1 Game Server - API Documentation
+        br
+        table(class='table table-striped table-dark table-hover' style='color:antiquewhite')
+            th(scope='col') Sample Link
+            th(scope='col') Type
+            th(scope='col') Arguments
+            th(scope='col') Return
+            th(scope='col') Description
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/game/new/10:10:SlipperyDevil/4a9654e9-9d13-401e-a2f9-9f5268b92fcd/ForcedId0001') Create Game
+                td
+                    h1.badge.badge-primary JSON
+                td MazeId, TeamId
+                td JSON Status Message
+                td.text-left Creates new (or finds existing) game session and returns link to game data.
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/game/ForcedId0001') Get Game
+                td
+                    h1.badge.badge-primary JSON
+                td GameId (GUID)
+                td Game Data
+                td.text-left Returns game with matching GameID, or status message if not found.
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/game/abandon/ForcedId0001/pw') Abandon Game
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td JSON Status Message
+                td.text-left Sets GAME_STATE to ABANDONED on the given game, if found.
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/games') Get Games
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Game Data Stubs
+                td.text-left Returns Game Data for all active games.
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/games/list') List Games
+                td
+                    h1.badge.badge-success HTML
+                td N/A
+                td List of Games
+                td.text-left Returns a spiffy HTML list of active games.
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/maze/10:15:SimpleSample') Get Maze
+                td
+                    h1.badge.badge-primary JSON
+                td MazeId (H:W:Seed)
+                td Maze Data
+                td.text-left Returns Maze from cache, 402 if not found
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/mazes') Get Mazes
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Maze Data Stubs
+                td.text-left Returns list of Maze Stubs available in cache
+            tr
+                td.text-nowrap
+                    a(href= 'http://maze.code-camp-2018.com/list' target='_blank') List Mazes
+                td
+                    h1.badge.badge-success HTML
+                    |&nbsp;
+                    h1.badge.badge-warning EXT
+                td N/A
+                td List of Mazes
+                td.text-left Links to Maze Service /list
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/teams') Get Teams
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Team Data
+                td.text-left Returns all Teams in cache
+            tr
+                td.text-nowrap
+                    a(href= 'http://team.code-camp-2018.com/list' target='_blank') List Teams
+                td
+                    h1.badge.badge-success HTML
+                    |&nbsp;
+                    h1.badge.badge-warning EXT
+                td N/A
+                td List of Teams
+                td.text-left Links to Team Service /list
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/scores') Get Scores
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Score Data
+                td.text-left Returns all Scores
+            tr
+                td.text-nowrap
+                    a(href= 'http://score.code-camp-2018.com/list' target='_blank') List Scores
+                td.text-nowrap
+                    h1.badge.badge-success HTML
+                    |&nbsp;
+                    h1.badge.badge-warning EXT
+                td N/A
+                td List of Scores
+                td.text-left Returns an HTML List of Scores
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/actions/get/ForcedId0001?start=1') All Actions
+                    br
+                    a(href= extUrl + '/actions/get/ForcedId0001?start=1&count=50') First 50 Actions
+                    br
+                    a(href= extUrl + '/actions/get/ForcedId0001?start=50') All Since Move #50
+                    br
+                    a(href= extUrl + '/actions/get/ForcedId0001?start=50&count=50') 50 Since Move #50
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Score Data
+                td.text-left Returns one or more game actions.
+                    hr(style='border-color:antiquewhite')
+                    | Format: /game/actions/get/<gameId>?start=1&count=10
+
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/game/action/ForcedId0001?act=move&dir=west') Move West
+                    br
+                    a(href= extUrl + '/game/action/ForcedId0001?act=move&dir=none') Move Nowhere
+                    br
+                    a(href= extUrl + '/game/action/ForcedId0001?act=look&dir=south') Look South
+                    br
+                    a(href= extUrl + '/game/action/ForcedId0001?act=look&dir=none') Look Here
+                    br
+                    a(href= extUrl + '/game/action/ForcedId0001?act=stand&dir=none') Stand Up&nbsp;&nbsp;
+                        h1.badge.badge-danger TODO
+                    br
+                    a(href= extUrl + '/game/action/ForcedId0001?act=write&dir=none&msg=Hello') Write (on floor)&nbsp;&nbsp;
+                        h1.badge.badge-danger TODO
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Action Result
+                td.text-left Action object containing outcomes, engram, and other move-specific information.
+                    hr(style='border-color:antiquewhite')
+                    | Format: /game/action/<gameId>?act=[ look | move | jump | write | stand ]&dir=[ none | north | south | east | west ]&msg=<message>
+
+                    
+    include foot.pug

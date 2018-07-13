@@ -1,0 +1,2 @@
+curl "http://localhost:8082/game/new/10:15:SimpleSample/b451bb96-f32a-48be-9efd-5f82cd900b66/ForcedId0002"
+curl "http://localhost:8082/game/ForcedId0002?act=look"
