@@ -34,6 +34,7 @@ export const GAME_SVC_EXT_URL = process.env.GAME_SVC_EXT_URL + ':' + GAME_SVC_EX
 export const CACHE_DELAY = process.env.GAME_SVC_CACHE_REFRESH || 30000; // milliseconds between cache refreshes (skipped in server.ts if no new activity detected)
 export const GAME_SVC_NAME = 'game-server';
 export const APP_VERSION = getPackageVersion();
+export const DELETE_PASSWORD = process.env.DELETE_PASSWORD;
 
 function getPackageVersion(): string {
     let data = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'));

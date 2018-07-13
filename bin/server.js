@@ -19,7 +19,7 @@ const cc2018_ts_lib_3 = require("cc2018-ts-lib"); // import classes
 const compression_1 = __importDefault(require("compression"));
 const act = __importStar(require("./actions"));
 const util_1 = require("util");
-const svc = __importStar(require("./request"));
+const request = __importStar(require("./request"));
 const express_1 = __importDefault(require("express"));
 const Enums_1 = require("../node_modules/cc2018-ts-lib/dist/Enums");
 // set module instance references
@@ -72,7 +72,7 @@ function loadMazeById(mazeId) {
         log.trace(__filename, 'loadMazeById()', util_1.format('Maze [%s] already loaded, skipping.', mazeId));
     }
     else {
-        svc.doRequest(EP['mazeById'].replace(':mazeId', mazeId), function handleGetMaze(res, body) {
+        request.doGet(EP['mazeById'].replace(':mazeId', mazeId), function handleGetMaze(res, body) {
             let maze = new cc2018_ts_lib_2.Maze(JSON.parse(body)); // this assignment is not totally necessary, but helps debug logging
             mazes.push(maze);
             log.trace(__filename, 'handleGetMaze()', util_1.format('Maze %s loaded.', maze.getId()));
@@ -94,7 +94,7 @@ function mazeLoaded(mazeId) {
 // cache it locally.  Refreshses as part of the incoming request
 // process if consts.CACHE_DELAY is exceeded
 function updateMazesCache() {
-    svc.doRequest(EP['mazes'], function handleGetMazes(res, body) {
+    request.doGet(EP['mazes'], function handleGetMazes(res, body) {
         mazeList = JSON.parse(body);
         // dumpArray(mazeList, 'id');
         log.debug(__filename, 'handleGetMazes()', util_1.format('%d maze stubs loaded into mazeList array.', mazeList.length));
@@ -110,7 +110,7 @@ function updateMazesCache() {
 }
 // Same as updateMazesCache, but with teams
 function updateTeamsCache() {
-    svc.doRequest(EP['teams'], function handleLoadScores(res, body) {
+    request.doGet(EP['teams'], function handleLoadScores(res, body) {
         teams = JSON.parse(body);
         // dumpArray(scoreList, 'scoreKey');
         log.debug(__filename, 'handleLoadScores()', util_1.format('%d teams loaded into scoreList array.', scoreList.length));
@@ -121,7 +121,7 @@ function updateTeamsCache() {
 }
 // Same as updateMazesCache, but with scores
 function udpateScoresCache() {
-    svc.doRequest(EP['scores'], function handleLoadScores(res, body) {
+    request.doGet(EP['scores'], function handleLoadScores(res, body) {
         scoreList = JSON.parse(body);
         // dumpArray(scoreList, 'scoreKey');
         log.debug(__filename, 'handleLoadScores()', util_1.format('%d scores loaded into scoreList array.', scoreList.length));
@@ -308,7 +308,7 @@ function startServer() {
             // only return active games
             if (games.length > 0) {
                 for (let n = 0; n < games.length; n++) {
-                    if (!!(games[n].getState() & cc2018_ts_lib_3.GAME_STATES.IN_PROGRESS) || !!(games[n].getState() & cc2018_ts_lib_3.GAME_STATES.NEW) || !!(games[n].getState() & cc2018_ts_lib_3.GAME_STATES.WAIT_BOT) || !!(games[n].getState() & cc2018_ts_lib_3.GAME_STATES.WAIT_TEAM)) {
+                    if (!!(games[n].getState() < cc2018_ts_lib_3.GAME_STATES.FINISHED)) {
                         let stub = {
                             gameId: games[n].getId(),
                             team: games[n].getTeam().toJSON(),
@@ -336,8 +336,10 @@ function startServer() {
             log.debug(__filename, req.url, 'Rendering list of active games.');
             res.render('list', { games: games });
         });
-        app.get('/game/abort/:gameId', function (req, res) {
+        app.get(['/game/abort/:gameId/password', '/game/abandon/:gameId/password'], function (req, res) {
             let gameId = req.params.gameId;
+            if (req.params.password != consts.DELETE_PASSWORD)
+                return res.status(401).json({ status: 'Missing or incorrect password' });
             if (!isGameInProgress(gameId)) {
                 res.json({ status: 'Game not current running:' + gameId });
             }
@@ -428,10 +430,10 @@ function startServer() {
                 }
                 // format the action and make sure it's valid
                 let argAct = util_1.format('%s', req.query.act).toUpperCase();
-                if (argAct != 'MOVE' && argAct != 'LOOK' && argAct != 'JUMP' && argAct != 'WRITE') {
+                if (argAct != 'MOVE' && argAct != 'LOOK' && argAct != 'JUMP' && argAct != 'WRITE' && argAct != 'STAND') {
                     log.warn(__filename, req.url, 'Invalid Action: ' + argAct);
                     return res.status(400).json({
-                        status: util_1.format('Invalid action: %s.  Expected ?act=[ MOVE | LOOK | JUMP | WRITE ]', argAct)
+                        status: util_1.format('Invalid action: %s.  Expected ?act=[ MOVE | LOOK | JUMP | STAND | WRITE ]', argAct)
                     });
                 }
                 // format the direction and make sure it's valid
@@ -474,6 +476,12 @@ function startServer() {
                     case 'LOOK': {
                         // looking into another room is free, but looking in dir.none or at a wall costs a move
                         act.doLook(game, dir, action);
+                        break;
+                    }
+                    case 'STAND': {
+                        // looking into another room is free, but looking in dir.none or at a wall costs a move
+                        act.doStand(game, dir, action);
+                        break;
                     }
                 }
                 // refresh some duplicated action values

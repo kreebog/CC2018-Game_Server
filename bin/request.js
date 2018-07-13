@@ -14,21 +14,44 @@ const log = cc2018_ts_lib_1.Logger.getInstance();
  * @param url - URL to request
  * @param callback - Callback to send response data to
  */
-function doRequest(url, callback) {
-    log.trace(__filename, 'doRequest()', util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
+function doGet(url, callback) {
+    log.trace(__filename, 'doGet()', util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
     request_1.default(url, (err, res, body) => {
         if (err) {
-            log.error(__filename, 'doRequest()', util_1.format('Error from %s \n::ERROR INFO:: %s', url, JSON.stringify(err)));
+            log.error(__filename, 'doGet()', util_1.format('Error from %s \n::ERROR INFO:: %s', url, JSON.stringify(err)));
             return err;
         }
         if (res.statusCode != 200) {
-            log.warn(__filename, 'doRequest()', util_1.format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
+            log.warn(__filename, 'doGet()', util_1.format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
             return;
         }
-        // all good, apparently - fire othe callback 
-        log.trace(__filename, 'doRequest()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
+        // all good, apparently - fire othe callback
+        log.trace(__filename, 'doGet()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
         callback(res, body);
     });
 }
-exports.doRequest = doRequest;
+exports.doGet = doGet;
+/**
+ * Wraps http request functionality in a call-back enabled function
+ *
+ * @param url - URL to request
+ * @param callback - Callback to send response data to
+ */
+function doPut(url, callback) {
+    log.trace(__filename, 'doPut()', util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
+    request_1.default(url, (err, res, body) => {
+        if (err) {
+            log.error(__filename, 'doPut()', util_1.format('Error from %s \n::ERROR INFO:: %s', url, JSON.stringify(err)));
+            return err;
+        }
+        if (res.statusCode != 200) {
+            log.warn(__filename, 'doPut()', util_1.format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
+            return;
+        }
+        // all good, apparently - fire othe callback
+        log.trace(__filename, 'doPut()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
+        callback(res, body);
+    });
+}
+exports.doPut = doPut;
 //# sourceMappingURL=request.js.map
