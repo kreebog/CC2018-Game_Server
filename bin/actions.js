@@ -6,6 +6,7 @@ const Enums_1 = require("../node_modules/cc2018-ts-lib/dist/Enums");
 const ITrophy_1 = require("../node_modules/cc2018-ts-lib/dist/ITrophy");
 let enums = cc2018_ts_lib_1.Enums.getInstance();
 let log = cc2018_ts_lib_1.Logger.getInstance();
+// when the player moves with direction 'none'
 let nullMotions = [
     'You dance like nobody is watching, but you feel silly anyway.',
     'You wiggle around like a worm on a hook.',

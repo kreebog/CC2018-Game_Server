@@ -36,12 +36,20 @@ html
                 td.text-left Sets GAME_STATE to ABANDONED on the given game, if found.
             tr
                 td.text-nowrap
-                    a(href= extUrl + '/games') Get Games
+                    a(href= extUrl + '/games') Get Active Games
                 td
                     h1.badge.badge-primary JSON
                 td N/A
                 td Game Data Stubs
-                td.text-left Returns Game Data for all active games.
+                td.text-left Returns Game Data for all active games in memory.
+            tr
+                td.text-nowrap
+                    a(href= extUrl + '/games') Get All Games
+                td
+                    h1.badge.badge-primary JSON
+                td N/A
+                td Game Data Stubs
+                td.text-left Returns Game Data for all games in memory.
             tr
                 td.text-nowrap
                     a(href= extUrl + '/games/list') List Games
@@ -152,5 +160,4 @@ html
                     hr(style='border-color:antiquewhite')
                     | Format: /game/action/<gameId>?act=[ look | move | jump | write | stand ]&dir=[ none | north | south | east | west ]&msg=<message>
 
-                    
     include foot.pug

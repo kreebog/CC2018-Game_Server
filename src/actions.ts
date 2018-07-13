@@ -6,6 +6,7 @@ import { Trophies } from '../node_modules/cc2018-ts-lib/dist/ITrophy';
 let enums = Enums.getInstance();
 let log = Logger.getInstance();
 
+// when the player moves with direction 'none'
 let nullMotions = [
     'You dance like nobody is watching, but you feel silly anyway.',
     'You wiggle around like a worm on a hook.',

@@ -365,16 +365,31 @@ function startServer() {
         });
 
         /**
-         * Sends JSON list of all current, active games with url to full /get/GameId link
+         * Sends JSON list of ALL game stubs full /get/GameId link
          */
         app.get('/games/all', function(req, res) {
             log.debug(__filename, req.url, 'Returning list of all games (stub data).');
+            log.debug(__filename, req.url, 'Returning list of active games (stub data).');
+            let data = new Array();
 
+            // only return active games
             if (games.length > 0) {
-                res.json(games);
-            } else {
-                res.json({ status: 'No games found.' });
+                for (let n = 0; n < games.length; n++) {
+                    let stub: IGameStub = {
+                        gameId: games[n].getId(),
+                        team: games[n].getTeam().toJSON(),
+                        gameState: games[n].getState(),
+                        score: games[n].getScore().toJSON(),
+                        mazeStub: games[n].getMaze().getMazeStub(),
+                        url: format('%s/%s/%s', consts.GAME_SVC_EXT_URL, 'game', games[n].getId())
+                    };
+
+                    data.push(stub);
+                }
+                if (data.length > 0) return res.json(data);
             }
+
+            res.json({ status: 'No games found.' });
         });
 
         /**
@@ -385,7 +400,7 @@ function startServer() {
             res.render('list', { games: games });
         });
 
-        app.get(['/game/abort/:gameId/password', '/game/abandon/:gameId/password'], function(req, res) {
+        app.get(['/game/abort/:gameId/:password', '/game/abandon/:gameId/:password'], function(req, res) {
             let gameId = req.params.gameId;
 
             if (req.params.password != consts.DELETE_PASSWORD) return res.status(401).json({ status: 'Missing or incorrect password' });
