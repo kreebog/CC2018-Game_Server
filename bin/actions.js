@@ -82,7 +82,7 @@ function doMove(game, dir, action) {
             action.outcome.push('YOU HAVE DIED');
             // game over - server function will handle saving and cleanup
             game.getScore().addMove();
-            game.setResult(Enums_1.GAME_RESULTS.DEATH_LAVA);
+            game.getScore().setGameResult(Enums_1.GAME_RESULTS.DEATH_LAVA);
             game.setState(Enums_1.GAME_STATES.FINISHED);
             game.getPlayer().addState(Enums_1.PLAYER_STATES.DEAD);
             doAddTrophy(game, action, Enums_1.TROPHY_IDS.WISHFUL_DYING);
@@ -97,13 +97,14 @@ function doMove(game, dir, action) {
             action.engram.taste = util_1.format('You can already taste the cheese that you know is waiting for you in your cage!');
             action.outcome.push(util_1.format('Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientist gently picks you up and carries you back to your cage.', game.getMaze().getSeed(), game.getScore().getMoveCount()));
             doAddTrophy(game, action, Enums_1.TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER);
+            // game over - server function will handle saving and cleanup
+            game.getScore().setGameResult(Enums_1.GAME_RESULTS.WIN);
+            game.setState(Enums_1.GAME_STATES.FINISHED);
             if (game.getMaze().getShortestPathLength() == game.getScore().getMoveCount()) {
-                doAddTrophy(game, action, Enums_1.TROPHY_IDS.PERFECT_RUN);
+                doAddTrophy(game, action, Enums_1.TROPHY_IDS.FLAWLESS_VICTORY);
+                game.getScore().setGameResult(Enums_1.GAME_RESULTS.WIN_FLAWLESS);
                 action.outcome.push(util_1.format("You just had a PERFECT RUN through %s! Are your whiskers smoking? Why don't you move on to something harder..."));
             }
-            // game over - server function will handle saving and cleanup
-            game.setResult(Enums_1.GAME_RESULTS.WIN);
-            game.setState(Enums_1.GAME_STATES.FINISHED);
             return;
         }
         else {
@@ -145,7 +146,8 @@ function doMove(game, dir, action) {
 }
 exports.doMove = doMove;
 function doAddTrophy(game, action, trophyId) {
-    if (!game.getTeam().hasTrophy(trophyId)) {
+    // don't show repeated trophies exept for flawless victory
+    if (!game.getTeam().hasTrophy(trophyId) && trophyId != Enums_1.TROPHY_IDS.FLAWLESS_VICTORY) {
         action.outcome.push('Trophy Earned: ' + ITrophy_1.Trophies[trophyId].name);
     }
     // add trophy to team - if they already have it, trophy.count is increased

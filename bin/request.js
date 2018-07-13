@@ -37,7 +37,7 @@ exports.doGet = doGet;
  * @param url - URL to request
  * @param callback - Callback to send response data to
  */
-function doPut(url, callback) {
+function doPut(url, body, callback) {
     log.trace(__filename, 'doPut()', util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
     request_1.default(url, (err, res, body) => {
         if (err) {

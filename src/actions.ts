@@ -24,9 +24,7 @@ export function doLook(game: Game, dir: DIRS, action: IAction) {
         doAddTrophy(game, action, TROPHY_IDS.WATCHING_PAINT_DRY);
     } else {
         if (dir == DIRS.NORTH && !!(cell.getTags() & TAGS.START)) {
-            action.engram.sight = format(
-                "You gaze longingly at the entrance to the %s, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!"
-            );
+            action.engram.sight = format("You gaze longingly at the entrance to the %s, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!");
             doAddTrophy(game, action, TROPHY_IDS.WISHFUL_THINKING);
         } else {
             let targetCell: Cell = game.getMaze().getCellNeighbor(cell, dir);
@@ -81,14 +79,12 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
             action.engram.sound = format('The last thing you hear are the echoes of squeaky screams.');
             action.engram.smell = format('The last thing you smell is burning fur.');
             action.engram.taste = format('The last thing you taste is lava. It tastes like chicken.');
-            action.outcome.push(
-                "You turn north and try to walk out through the maze entrance, but it's filled with lava. We told you it would be. At least your death is mercifully quick."
-            );
+            action.outcome.push("You turn north and try to walk out through the maze entrance, but it's filled with lava. We told you it would be. At least your death is mercifully quick.");
             action.outcome.push('YOU HAVE DIED');
 
             // game over - server function will handle saving and cleanup
             game.getScore().addMove();
-            game.setResult(GAME_RESULTS.DEATH_LAVA);
+            game.getScore().setGameResult(GAME_RESULTS.DEATH_LAVA);
             game.setState(GAME_STATES.FINISHED);
             game.getPlayer().addState(PLAYER_STATES.DEAD);
             doAddTrophy(game, action, TROPHY_IDS.WISHFUL_DYING);
@@ -98,28 +94,22 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
             action.engram.touch = format('The cool air of the lab washes over your tired body as you safely exit the maze.');
             action.engram.sight = format('The cold, harsh lights of the lab are almost blinding, but you see the shadow of a giant approaching.');
             action.engram.sound = format('The cheering and applause of the scientist is so loud that it hurts your ears.');
-            action.engram.smell = format(
-                "Your nose twitches as it's assaulted by the smells of iodine, rubbing alcohol, betadine, and caramel-mocha frappuccino."
-            );
+            action.engram.smell = format("Your nose twitches as it's assaulted by the smells of iodine, rubbing alcohol, betadine, and caramel-mocha frappuccino.");
             action.engram.taste = format('You can already taste the cheese that you know is waiting for you in your cage!');
-            action.outcome.push(
-                format(
-                    'Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientist gently picks you up and carries you back to your cage.',
-                    game.getMaze().getSeed(),
-                    game.getScore().getMoveCount()
-                )
-            );
+            action.outcome.push(format('Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientist gently picks you up and carries you back to your cage.', game.getMaze().getSeed(), game.getScore().getMoveCount()));
 
             doAddTrophy(game, action, TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER);
 
+            // game over - server function will handle saving and cleanup
+            game.getScore().setGameResult(GAME_RESULTS.WIN);
+            game.setState(GAME_STATES.FINISHED);
+
             if (game.getMaze().getShortestPathLength() == game.getScore().getMoveCount()) {
-                doAddTrophy(game, action, TROPHY_IDS.PERFECT_RUN);
+                doAddTrophy(game, action, TROPHY_IDS.FLAWLESS_VICTORY);
+                game.getScore().setGameResult(GAME_RESULTS.WIN_FLAWLESS);
                 action.outcome.push(format("You just had a PERFECT RUN through %s! Are your whiskers smoking? Why don't you move on to something harder..."));
             }
 
-            // game over - server function will handle saving and cleanup
-            game.setResult(GAME_RESULTS.WIN);
-            game.setState(GAME_STATES.FINISHED);
             return;
         } else {
             //SUCCESSFUL MOVE
@@ -157,7 +147,8 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
 }
 
 export function doAddTrophy(game: Game, action: IAction, trophyId: TROPHY_IDS) {
-    if (!game.getTeam().hasTrophy(trophyId)) {
+    // don't show repeated trophies exept for flawless victory
+    if (!game.getTeam().hasTrophy(trophyId) && trophyId != TROPHY_IDS.FLAWLESS_VICTORY) {
         action.outcome.push('Trophy Earned: ' + Trophies[trophyId].name);
     }
 

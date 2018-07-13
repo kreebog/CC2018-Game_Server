@@ -38,7 +38,7 @@ export function doGet(url: string, callback: Function) {
  * @param url - URL to request
  * @param callback - Callback to send response data to
  */
-export function doPut(url: string, callback: Function) {
+export function doPut(url: string, body: string, callback: Function) {
     log.trace(__filename, 'doPut()', format('Requesting [%s] with callback to [%s]', url, callback.name));
 
     request(url, (err, res, body) => {

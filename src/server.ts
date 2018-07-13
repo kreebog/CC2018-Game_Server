@@ -11,7 +11,6 @@ import { format } from 'util';
 import { Server } from 'http';
 import * as request from './request';
 import express from 'express';
-import { openSync } from 'fs';
 import { PLAYER_STATES } from '../node_modules/cc2018-ts-lib/dist/Enums';
 
 // set module instance references
@@ -94,9 +93,15 @@ function mazeLoaded(mazeId: string): boolean {
 // process if consts.CACHE_DELAY is exceeded
 function updateMazesCache() {
     request.doGet(EP['mazes'], function handleGetMazes(res: Response, body: any) {
-        mazeList = JSON.parse(body);
-        // dumpArray(mazeList, 'id');
-        log.debug(__filename, 'handleGetMazes()', format('%d maze stubs loaded into mazeList array.', mazeList.length));
+        lastMazeListFill = Date.now();
+        let data = JSON.parse(body);
+        if (data.result !== undefined) {
+            log.debug(__filename, 'handleLoadMazes()', 'No mazes were found.');
+            mazeList = new Array<IMazeStub>();
+        } else {
+            mazeList = data;
+            log.debug(__filename, 'handleLoadScores()', format('%d maze stubs loaded into mazeList array.', mazeList.length));
+        }
 
         // populate the mazes list
         mazeList.forEach(mazeStub => {
@@ -112,9 +117,15 @@ function updateMazesCache() {
 // Same as updateMazesCache, but with teams
 function updateTeamsCache() {
     request.doGet(EP['teams'], function handleLoadScores(res: Response, body: any) {
-        teams = JSON.parse(body);
-        // dumpArray(scoreList, 'scoreKey');
-        log.debug(__filename, 'handleLoadScores()', format('%d teams loaded into scoreList array.', scoreList.length));
+        lastTeamListFill = Date.now();
+        let data = JSON.parse(body);
+        if (data.status !== undefined) {
+            teams = new Array<ITeam>();
+            log.debug(__filename, 'handleLoadTeams()', 'No teams were found.');
+        } else {
+            teams = data;
+            log.debug(__filename, 'handleLoadTeams()', format('%d teams loaded into teams array.', teams.length));
+        }
 
         // attempt to start the service
         if (!serviceStarted) bootstrap();
@@ -124,9 +135,15 @@ function updateTeamsCache() {
 // Same as updateMazesCache, but with scores
 function udpateScoresCache() {
     request.doGet(EP['scores'], function handleLoadScores(res: Response, body: any) {
-        scoreList = JSON.parse(body);
-        // dumpArray(scoreList, 'scoreKey');
-        log.debug(__filename, 'handleLoadScores()', format('%d scores loaded into scoreList array.', scoreList.length));
+        lastScoreListFill = Date.now();
+        let data = JSON.parse(body);
+        if (data.status !== undefined) {
+            scoreList = new Array<IScore>();
+            log.debug(__filename, 'handleLoadScores()', 'No scores were found.');
+        } else {
+            scoreList = data;
+            log.debug(__filename, 'handleLoadScores()', format('%d scores loaded into scoreList array.', scoreList.length));
+        }
 
         // attempt to start the service
         if (!serviceStarted) bootstrap();
@@ -137,19 +154,11 @@ function udpateScoresCache() {
  * Kicks off the cache refresh interval once base caches are filled
  */
 function bootstrap() {
-    if (mazeList.length > 0 && scoreList.length > 0 && teams.length > 0) {
-        log.debug(
-            __filename,
-            'bootstrap()',
-            format('Caches populated, starting server.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length)
-        );
+    if (lastMazeListFill > 0 && lastScoreListFill > 0 && lastTeamListFill > 0) {
+        log.debug(__filename, 'bootstrap()', format('Caches populated, starting server.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
         startServer(); // start the express server
     } else {
-        log.warn(
-            __filename,
-            'bootstrap()',
-            format('Maze, Score, and Team lists must be populated.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length)
-        );
+        log.warn(__filename, 'bootstrap()', format('Maze, Score, and Team lists must be populated.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
     }
 }
 
@@ -158,7 +167,7 @@ function bootstrap() {
  *
  * @param gameId
  */
-function getGame(gameId: string): Game {
+function getGame(gameId: string) {
     for (let n = 0; n < games.length; n++) {
         if (games[n].getId() == gameId) {
             return games[n];
@@ -201,6 +210,7 @@ function abortGame(gameId: string) {
     for (let n = 0; n < games.length; n++) {
         if (games[n].getId() == gameId) {
             games[n].setState(GAME_STATES.ABORTED);
+            games[n].getScore().setGameResult(GAME_RESULTS.ABANDONED);
 
             // allow the game ID to be reused at some point
             games[n].forceSetId('_aborted_' + games[n].getId());
@@ -220,7 +230,7 @@ function getActiveGameIdByTeam(teamId: string): string {
 
         if (g.getTeam().getId() == teamId) {
             let gs = g.getState();
-            if (!!(gs & GAME_STATES.NEW) || !!(gs & GAME_STATES.IN_PROGRESS) || !!(gs & GAME_STATES.WAIT_BOT) || !!(gs & GAME_STATES.WAIT_TEAM)) {
+            if (gs < GAME_STATES.FINISHED) {
                 log.debug(__filename, 'getActiveGameIdByTeam()', 'Game found: ' + games[n].getId());
                 return games[n].getId();
             }
@@ -286,19 +296,16 @@ function startServer() {
             // check for cache update needs
             if (Date.now() - lastMazeListFill > consts.CACHE_DELAY) {
                 log.info(__filename, 'startServer()', format('mazeList cache expired - calling refresh.'));
-                lastMazeListFill = Date.now();
                 updateMazesCache();
             }
 
             if (Date.now() - lastScoreListFill > consts.CACHE_DELAY) {
                 log.info(__filename, 'startServer()', format('scoreList cache expired - calling refresh.'));
-                lastScoreListFill = Date.now();
                 udpateScoresCache();
             }
 
             if (Date.now() - lastTeamListFill > consts.CACHE_DELAY) {
                 log.info(__filename, 'startServer()', format('teams cache expired - calling refresh.'));
-                lastTeamListFill = Date.now();
                 updateTeamsCache();
             }
 
@@ -346,17 +353,7 @@ function startServer() {
             // only return active games
             if (games.length > 0) {
                 for (let n = 0; n < games.length; n++) {
-                    if (!!(games[n].getState() < GAME_STATES.FINISHED)) {
-                        let stub: IGameStub = {
-                            gameId: games[n].getId(),
-                            team: games[n].getTeam().toJSON(),
-                            gameState: games[n].getState(),
-                            score: games[n].getScore().toJSON(),
-                            mazeStub: games[n].getMaze().getMazeStub(),
-                            url: format('%s/%s/%s', consts.GAME_SVC_EXT_URL, 'game', games[n].getId())
-                        };
-                        data.push(stub);
-                    }
+                    if (games[n].getState() < GAME_STATES.FINISHED) data.push(games[n].getStub(consts.GAME_SVC_EXT_URL));
                 }
 
                 if (data.length > 0) return res.json(data);
@@ -369,22 +366,12 @@ function startServer() {
          */
         app.get('/games/all', function(req, res) {
             log.debug(__filename, req.url, 'Returning list of all games (stub data).');
-            log.debug(__filename, req.url, 'Returning list of active games (stub data).');
             let data = new Array();
 
             // only return active games
             if (games.length > 0) {
                 for (let n = 0; n < games.length; n++) {
-                    let stub: IGameStub = {
-                        gameId: games[n].getId(),
-                        team: games[n].getTeam().toJSON(),
-                        gameState: games[n].getState(),
-                        score: games[n].getScore().toJSON(),
-                        mazeStub: games[n].getMaze().getMazeStub(),
-                        url: format('%s/%s/%s', consts.GAME_SVC_EXT_URL, 'game', games[n].getId())
-                    };
-
-                    data.push(stub);
+                    data.push(games[n].getStub(consts.GAME_SVC_EXT_URL));
                 }
                 if (data.length > 0) return res.json(data);
             }
@@ -397,7 +384,10 @@ function startServer() {
          */
         app.get('/games/list', function(req, res) {
             log.debug(__filename, req.url, 'Rendering list of active games.');
-            res.render('list', { games: games });
+            res.render('list', {
+                games: games,
+                extUrl: consts.GAME_SVC_EXT_URL
+            });
         });
 
         app.get(['/game/abort/:gameId/:password', '/game/abandon/:gameId/:password'], function(req, res) {
@@ -437,9 +427,7 @@ function startServer() {
                 // check for a forced game id
                 if (forcedGameId != '' && isGameInProgress(forcedGameId)) {
                     log.debug(__filename, req.url, format('Game %s already exists - force a different gameId.', forcedGameId));
-                    return res
-                        .status(400)
-                        .json({ status: format('Game %s already exists - force a differeng gameId.', forcedGameId), url: gameUrl + forcedGameId });
+                    return res.status(400).json({ status: format('Game %s already exists - force a differeng gameId.', forcedGameId), url: gameUrl + forcedGameId });
                 }
 
                 // create the game's objects
@@ -498,10 +486,11 @@ function startServer() {
          * Returns the results of the action and an engram describing
          * new state.
          */
-        app.get('/game/action/:gameId', function(req, res) {
+        app.get(['/game/action/:gameId', '/game/action/:gameId/:botId'], function(req, res) {
             try {
                 // make sure we have the right arguments
-                if (req.query.act === undefined || req.params.gameId === undefined) {
+                if (req.query.act === undefined || req.params.gameId === undefined || req.params.gameId === 'undefined') {
+                    log.warn(__filename, req.url, 'gameId is undefined.');
                     return res.status(400).json({
                         status: 'Missing querystring argument(s). Format=?act=[move|look|jump|write] [&dir=<none|north|south|east|west>] [&message=text]'
                     });
@@ -542,7 +531,7 @@ function startServer() {
                 // now remove turn-based states that might have been set in the last turn
                 if (!!(game.getPlayer().State & PLAYER_STATES.STUNNED)) {
                     game.getPlayer().removeState(PLAYER_STATES.STUNNED);
-                    action.outcome.push('Stunned--');
+                    log.debug(__filename, req.url, 'PLAYER.STUNNED Removed.');
                 }
 
                 // perform the appropriate action
@@ -576,6 +565,14 @@ function startServer() {
                 // store the action on the game action stack and return it to the requester as json
                 game.addAction(action);
                 res.json(action);
+
+                // handle game end states
+                if (game.getState() > GAME_STATES.IN_PROGRESS) {
+                    log.debug(__filename, req.url, format('Game [%s] with result [%s]', GAME_STATES[game.getState()], GAME_RESULTS[game.getScore().getGameResult()]));
+                    request.doPut(consts.SCORE_SVC_URL + '/score', JSON.stringify(game.getScore()), function handlePutScore(res: any, body: any) {
+                        log.debug(__filename, req.url, format('Score saved.'));
+                    });
+                }
             } catch (err) {
                 log.error(__filename, req.url, 'Error executing action: ' + err.stack);
                 res.status(500).json({ status: err.toString() });
