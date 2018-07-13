@@ -176,20 +176,24 @@ function doSee(player: Player, cell: Cell, dir: DIRS): string {
 
     // TODO: Add Trap Visuals
     if (dir == DIRS.NONE) {
-        ret = format('You are %s in a room with %s to the %s.', pPosture, exitString.indexOf('and') < 0 ? 'an exit' : 'exits', exitString);
+        ret = format('You see that you are %s in a room with %s to the %s.', pPosture, exitString.indexOf('and') < 0 ? 'an exit' : 'exits', exitString);
     } else {
-        ret = format('Just to the %s, you see a room with %s to the %s.', getDirName(dir), exitString.indexOf('and') < 0 ? 'an exit' : 'exits', exitString);
+        ret = format('You see, just to the %s, a room with %s to the %s.', getDirName(dir), exitString.indexOf('and') < 0 ? 'an exit' : 'exits', exitString);
     }
 
     return ret;
 }
 
 function doSmell(player: Player, cell: Cell, dir: DIRS): string {
-    return 'You smell nothing but the damp stone all around you.';
+    return 'You smell nothing but the damp stone walls around you.';
 }
 
 function doHear(player: Player, cell: Cell, dir: DIRS): string {
-    return 'You hear the scraping of your tiny claws on the stone floor.';
+    if (!(player.State & PLAYER_STATES.SITTING)) {
+        return 'You hear the sounds of silence.';
+    } else {
+        return 'You hear the scraping of your tiny claws on the stone floor.';
+    }
 }
 
 function doFeel(player: Player, cell: Cell, dir: DIRS): string {
