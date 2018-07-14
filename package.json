@@ -21,7 +21,7 @@
     "dependencies": {
         "@types/collections": "^5.0.0",
         "@types/request": "^2.47.1",
-        "cc2018-ts-lib": "^1.4.39",
+        "cc2018-ts-lib": "^1.4.41",
         "collections": "^5.1.4",
         "compression": "^1.7.2",
         "dotenv": "^6.0.0",
