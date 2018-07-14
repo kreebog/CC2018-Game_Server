@@ -100,12 +100,12 @@ function updateMazesCache() {
         lastMazeListFill = Date.now();
         let data = JSON.parse(body);
         if (data.result !== undefined) {
-            log.debug(__filename, 'handleLoadMazes()', 'No mazes were found.');
+            log.warn(__filename, 'handleLoadMazes()', 'No mazes were found.');
             mazeList = new Array();
         }
         else {
             mazeList = data;
-            log.debug(__filename, 'handleLoadScores()', util_1.format('%d maze stubs loaded into mazeList array.', mazeList.length));
+            log.trace(__filename, 'handleLoadScores()', util_1.format('%d maze stubs loaded into mazeList array.', mazeList.length));
         }
         // populate the mazes list
         mazeList.forEach(mazeStub => {
@@ -121,11 +121,11 @@ function updateTeamsCache() {
         let data = JSON.parse(body);
         if (data.status !== undefined) {
             teams = new Array();
-            log.debug(__filename, 'handleLoadTeams()', 'No teams were found.');
+            log.warn(__filename, 'handleLoadTeams()', 'No teams were found.');
         }
         else {
             teams = data;
-            log.debug(__filename, 'handleLoadTeams()', util_1.format('%d teams loaded into teams array.', teams.length));
+            log.trace(__filename, 'handleLoadTeams()', util_1.format('%d teams loaded into teams array.', teams.length));
         }
     });
 }
@@ -136,11 +136,11 @@ function udpateScoresCache() {
         let data = JSON.parse(body);
         if (data.status !== undefined) {
             scoreList = new Array();
-            log.debug(__filename, 'handleLoadScores()', 'No scores were found.');
+            log.warn(__filename, 'handleLoadScores()', 'No scores were found.');
         }
         else {
             scoreList = data;
-            log.debug(__filename, 'handleLoadScores()', util_1.format('%d scores loaded into scoreList array.', scoreList.length));
+            log.trace(__filename, 'handleLoadScores()', util_1.format('%d scores loaded into scoreList array.', scoreList.length));
         }
     });
 }
@@ -494,6 +494,7 @@ function startServer() {
          * new state.
          */
         app.get(['/game/action/:gameId', '/game/action/:gameId/:botId'], function (req, res) {
+            log.debug(__filename, req.url, 'ACTION REQUEST RECIEVED');
             let start = Date.now();
             try {
                 // make sure we have the right arguments
@@ -581,11 +582,11 @@ function startServer() {
                     });
                 }
                 // log action response
-                log.debug(__filename, req.url, util_1.format('Action %s completed in %sms. Sending response.', argAct, Date.now() - start));
+                log.debug(__filename, req.url, util_1.format('ACTION REQUEST COMPLETED: %s completed in %sms. Sending response.', argAct, Date.now() - start));
                 res.json(action);
             }
             catch (err) {
-                log.error(__filename, req.url, 'Error executing action: ' + err.stack);
+                log.error(__filename, req.url, 'ACTION REQUEST ERROR: ' + err.stack);
                 res.status(500).json({ status: err.toString() });
             }
         });
