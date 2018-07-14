@@ -43,7 +43,33 @@ export function doLook(game: Game, dir: DIRS, action: IAction) {
     return;
 }
 
-export function doWrite(message: string) {
+export function doWrite(game: Game, dir: DIRS, action: IAction, message: string) {
+    let player = game.getPlayer();
+    let cell = game.getMaze().getCell(player.Location);
+
+    // add the note to the wrong
+    if (message == '') message = 'X';
+
+    cell.addNote(message);
+    doAddTrophy(game, action, TROPHY_IDS.SCRIBBLER);
+
+    if (cell.getNotes().length > 1) {
+        doAddTrophy(game, action, TROPHY_IDS.PAPERBACK_WRITER);
+    }
+
+    if (action.engram.sight == '') action.engram.sight = doSee(player, cell, dir);
+    if (action.engram.touch == '') action.engram.touch = doFeel(player, cell, dir);
+    if (action.engram.sound == '') action.engram.sound = doHear(player, cell, dir);
+    if (action.engram.smell == '') action.engram.smell = doSmell(player, cell, dir);
+    if (action.engram.taste == '') action.engram.taste = doTaste(player, cell, dir);
+
+    if (message == 'X') {
+        action.outcome.push('You couldn\'t think of what to write, so you just scratch an "X" onto the floor with your claw.');
+    } else {
+        action.outcome.push('You used your tiny claw to scratch "' + message + '" onto the floor of the room.');
+    }
+
+    game.getScore().addMove();
     log.debug(__filename, 'doWrite()', format('Player writes [%s] on the floor.', message));
 }
 
@@ -147,6 +173,8 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
 }
 
 export function doAddTrophy(game: Game, action: IAction, trophyId: TROPHY_IDS) {
+    log.debug(__filename, 'doAddTrophy()', format('Trophy Awarded: [%s]', TROPHY_IDS[trophyId]));
+
     // don't show repeated trophies exept for flawless victory
     if (!game.getTeam().hasTrophy(trophyId) && trophyId != TROPHY_IDS.FLAWLESS_VICTORY) {
         action.outcome.push('Trophy Earned: ' + Trophies[trophyId].name);
@@ -179,6 +207,29 @@ export function doStand(game: Game, dir: DIRS, action: IAction) {
     action.outcome.push(outcome);
 }
 
+function readNotes(cell: Cell, dir: DIRS): string {
+    let notes: Array<string> = cell.getNotes();
+    let concat: string = '';
+    let ret = '';
+
+    if (notes.length == 0) return '';
+
+    // only write the notes if they are in the
+    // same room that the player is in
+    if (dir == DIRS.NONE) {
+        ret = notes.length == 1 ? ' There is a note scrawled on the floor: ' : format(' There are %d notes scrawled on the floor in here: ', notes.length);
+        for (let x = 0; x < notes.length; x++) {
+            if (concat != '') concat = concat + (x == notes.length - 1 ? concat + ', and ' : ', ');
+            concat = concat + format('&quot;%s&quot;', notes[x]);
+        }
+        ret = ret + concat;
+    } else {
+        ret = ' There appears to be something scratched onto the floor in there.';
+    }
+
+    return ret;
+}
+
 function doSee(player: Player, cell: Cell, dir: DIRS): string {
     let pPosture: string = getPostureString(player.State);
     let exitString = getExitString(cell.getExits());
@@ -190,6 +241,9 @@ function doSee(player: Player, cell: Cell, dir: DIRS): string {
     } else {
         ret = format('You see, just to the %s, a room with %s to the %s.', getDirName(dir), exitString.indexOf('and') < 0 ? 'an exit' : 'exits', exitString);
     }
+
+    // Add notes to sight engram
+    ret = ret + readNotes(cell, dir);
 
     return ret;
 }

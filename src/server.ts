@@ -91,7 +91,7 @@ function mazeLoaded(mazeId: string): boolean {
 }
 
 // Pull the list of available mazes from the maze-service
-// cache it locally.  Refreshses as part of the incoming request
+// cache it locally. Refreshses as part of the incoming request
 // process if consts.CACHE_DELAY is exceeded
 function updateMazesCache() {
     request.doGet(EP['mazes'], function handleGetMazes(res: Response, body: any) {
@@ -153,12 +153,12 @@ function bootstrap() {
     if (lastScoreListFill == 0) udpateScoresCache();
 
     if (lastMazeListFill > 0 && lastScoreListFill > 0 && lastTeamListFill > 0) {
-        log.debug(__filename, 'bootstrap()', format('Caches populated, starting server.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
+        log.debug(__filename, 'bootstrap()', format('Caches populated, starting server. mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
         clearInterval(bootstrapTimer); // kill the timer
         startServer(); // start the express server
     } else {
         // initialize the server & cache refresh processes
-        log.warn(__filename, 'bootstrap()', format('Maze, Score, and Team lists must be populated.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
+        log.warn(__filename, 'bootstrap()', format('Maze, Score, and Team lists must be populated. mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
     }
 }
 
@@ -166,9 +166,27 @@ function bootstrap() {
  * Removes games from the top of the array to make room for new games at the bottom
  */
 function gcGames() {
-    while (games.length >= consts.MAX_GAMES_IN_MEMORY) {
-        log.warn(__filename, 'gcGames()', format('games array size limit (%s) reached, removing oldest entry...', consts.MAX_GAMES_IN_MEMORY));
-        games.shift();
+    let gcTrigger = Math.floor(consts.MAX_GAMES_IN_MEMORY * 0.9); // if array is 90% full, trigger collection
+
+    if (games.length >= gcTrigger) {
+        log.debug(__filename, 'gcGames()', format('Active games garbage collection triggered. GC_TriggerSize: %s, Current Size: %s, Max Size: %s', gcTrigger, games.length, consts.MAX_GAMES_IN_MEMORY));
+        let cleanGames = new Array<Game>();
+
+        // remove all of the aborted games
+        games.forEach(game => {
+            if (game.getState() != GAME_STATES.ABORTED) {
+                cleanGames.push(game);
+                log.trace(__filename, 'gcGames()', format('Active game preserved in games array: %s', game.getId()));
+            } else {
+                log.trace(__filename, 'gcGames()', format('Abandoned game removed from games array: %s', game.getId()));
+            }
+        });
+
+        // reassign the games array
+        log.debug(__filename, 'gcGames()', format('Collection complete. GC_TriggerSize: %s, Original Size: %s, New Size: %s', gcTrigger, games.length, cleanGames.length));
+        games = cleanGames;
+    } else {
+        log.debug(__filename, 'gcGames()', format('Games array garbage collection not necessary. GC_TriggerSize: %s, Current Size: %s, Max Size: %s', gcTrigger, games.length, consts.MAX_GAMES_IN_MEMORY));
     }
 }
 
@@ -292,7 +310,7 @@ function newTeamGame(mazeId: string, teamId: string, forcedGameId: string): any 
         maze = findMaze(mazeId); // throws error if not found
     } catch (err) {
         log.warn(__filename, fnName, 'Maze not found in Maze Cache: ' + mazeId);
-        return { status: 'Unable to create game.  Maze not found: ' + mazeId };
+        return { status: 'Unable to create game. Maze not found: ' + mazeId };
     }
 
     // get the team
@@ -300,7 +318,7 @@ function newTeamGame(mazeId: string, teamId: string, forcedGameId: string): any 
         team = new Team(getTeamData(teamId)); // throws error if not found
     } catch (err) {
         log.warn(__filename, fnName, 'Team not found in Team Cache: ' + teamId);
-        return { status: 'Unable to create game.  Team not found: ' + teamId };
+        return { status: 'Unable to create game. Team not found: ' + teamId };
     }
 
     // create player and score objects
@@ -334,6 +352,11 @@ function newTeamGame(mazeId: string, teamId: string, forcedGameId: string): any 
     gcGames();
 
     // store the game
+    if (games.length > consts.MAX_GAMES_IN_MEMORY) {
+        log.warn(__filename, fnName, format('Active Games Array is full with %s active games. Try again later.', games.length));
+        return { status: format('Active Games Array is full with %s active games. Try again later.', games.length) };
+    }
+
     games.push(game);
 
     // log and return status
@@ -530,7 +553,7 @@ function startServer() {
                 if (argAct != 'MOVE' && argAct != 'LOOK' && argAct != 'JUMP' && argAct != 'WRITE' && argAct != 'STAND') {
                     log.warn(__filename, req.url, 'Invalid Action: ' + argAct);
                     return res.status(400).json({
-                        status: format('Invalid action: %s.  Expected ?act=[ MOVE | LOOK | JUMP | STAND | WRITE ]', argAct)
+                        status: format('Invalid action: %s. Expected ?act=[ MOVE | LOOK | JUMP | STAND | WRITE ]', argAct)
                     });
                 }
 
@@ -560,33 +583,39 @@ function startServer() {
                 // now remove turn-based states that might have been set in the last turn
                 if (!!(game.getPlayer().State & PLAYER_STATES.STUNNED)) {
                     game.getPlayer().removeState(PLAYER_STATES.STUNNED);
-                    log.debug(__filename, req.url, 'Player STUNNDED state Removed.');
+                    log.debug(__filename, req.url, 'Player STUNNED state Removed.');
                 }
 
                 // perform the appropriate action
                 switch (argAct) {
                     case 'MOVE': {
-                        log.debug(__filename, req.url, format('Calling doMove(%s)', DIRS[dir]));
                         act.doMove(game, dir, action);
                         break;
                     }
                     case 'JUMP': {
-                        log.debug(__filename, req.url, format('Calling doJump(%s)', DIRS[dir]));
                         break;
                     }
                     case 'WRITE': {
-                        log.debug(__filename, req.url, format('doWrite() NOT IMPLEMENTED'));
+                        if (req.query.message === undefined) {
+                            log.warn(__filename, req.url, 'Message argument not supplied for action WRITE, aborting action.');
+                            return res.status(400).json({ status: 'Message is required for ?act=write. Try ?act=write&dir=none&message=Hello%20World' });
+                        }
+
+                        // get the message and clean it up
+                        let message = req.query.message + '';
+                        message = message.trim();
+
+                        // write it
+                        act.doWrite(game, dir, action, message);
                         break;
                     }
                     case 'LOOK': {
                         // looking into another room is free, but looking in dir.none or at a wall costs a move
-                        log.debug(__filename, req.url, format('Calling doLook(%s)', DIRS[dir]));
                         act.doLook(game, dir, action);
                         break;
                     }
                     case 'STAND': {
                         // looking into another room is free, but looking in dir.none or at a wall costs a move
-                        log.debug(__filename, req.url, format('Calling doStand()'));
                         act.doStand(game, dir, action);
                         break;
                     }
