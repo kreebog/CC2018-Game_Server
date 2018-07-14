@@ -1,5 +1,5 @@
 import { format } from 'util';
-import { Logger, Enums, Game, DIRS, Cell, IEngram, Player, IAction } from 'cc2018-ts-lib';
+import { Logger, Enums, Game, DIRS, Cell, IEngram, Player, IAction, Pos } from 'cc2018-ts-lib';
 import { PLAYER_STATES, TAGS, TROPHY_IDS, GAME_RESULTS, GAME_STATES } from '../node_modules/cc2018-ts-lib/dist/Enums';
 import { Trophies } from '../node_modules/cc2018-ts-lib/dist/ITrophy';
 
@@ -12,7 +12,16 @@ let nullMotions = [
     'You wiggle around like a worm on a hook.',
     'You try to moonwalk your way out of the room, but you end up just walking in place... Backwards.',
     'You start to leave the room, but forget which way you were going so you just stand there feeling confused.',
-    "You have no idea where you're going and, in your confusion, trip over your own feet and fall to the ground."
+    "You have no idea where you're going and, in your confusion, you trip over your own feet and fall to the ground."
+];
+
+// when the player moves with direction 'none'
+let nullJumps = [
+    'You jump up and down excitedly, but go nowhere.',
+    'You do some jumping jacks.  Is this really the best time to work on your cardio?',
+    'You try to see if you can jump high enough to touch the ceiling. Nope. Not even close.',
+    'You jump around. Jump around. Jump up, jump up, and get down.',
+    'You decide to try to do a backflip and fail miserably, landing in a heap on the floor.'
 ];
 
 export function doLook(game: Game, dir: DIRS, action: IAction) {
@@ -73,21 +82,172 @@ export function doWrite(game: Game, dir: DIRS, action: IAction, message: string)
     log.debug(__filename, 'doWrite()', format('Player writes [%s] on the floor.', message));
 }
 
+export function doStunned(game: Game, dir: DIRS, action: IAction) {
+    action.engram.touch = format('You feel a numb tingling in your limbs start to fade away as you recover from being stunned.');
+    action.engram.sight = format('You see the stars in your eyes start to twinkle out as you recover from being stunned.');
+    action.engram.sound = format('You hear the ringing in your ears start to diminish as you recover from being stunned.');
+    action.engram.smell = format('You smell the dusty air starting to creep back into your battered nose as you recover from being stunned.');
+    action.engram.taste = format('You taste the bitter regret of having done something foolish as you recover from being stunned.');
+    action.outcome.push('You are sitting on the floor, no longer stunned.');
+    //TODO: Add trophy for recovering from stunned
+    game.getPlayer().removeState(PLAYER_STATES.STUNNED);
+    game.getScore().addMove();
+    log.debug(__filename, 'doStunned()', format('Player has recovered from being stunned.'));
+}
+
 export function doJump(game: Game, dir: DIRS, action: IAction) {
     let player = game.getPlayer();
     let cell = game.getMaze().getCell(player.Location);
+    let nextCell: Cell = new Cell();
+    let nextNextCell: Cell = new Cell();
 
-    return;
+    // gotta look two moves ahead here
+    if (cell.isDirOpen(dir)) {
+        // can't get cells that are outside of the maze array bounds
+        if (!(!!(cell.getTags() & TAGS.START) && dir == DIRS.NORTH) && !(!!(cell.getTags() & TAGS.FINISH) && dir == DIRS.SOUTH)) {
+            nextCell = game.getMaze().getCellNeighbor(cell, dir);
+            if (nextCell.isDirOpen(dir)) {
+                nextNextCell = game.getMaze().getCellNeighbor(nextCell, dir);
+            }
+        }
+    }
 
     // NO DIRECTION
-    if (dir == DIRS.NONE) {
-        game.getScore().addMove();
-        action.engram.touch = nullMotions[Math.floor(Math.random() * nullMotions.length)];
+    if (dir == DIRS.NONE && !(player.State & PLAYER_STATES.SITTING)) {
+        let njIdx = Math.floor(Math.random() * nullMotions.length);
+
+        // jumps cost two moves
+        game.getScore().setMoveCount(game.getScore().getMoveCount() + 2);
+        action.engram.touch = nullJumps[njIdx];
+        if ((njIdx = nullJumps.length - 1)) {
+            player.addState(PLAYER_STATES.SITTING);
+        }
         baselineEngram(action.engram, player, cell, dir);
-        doAddTrophy(game, action, TROPHY_IDS.WASTED_TIME);
+        doAddTrophy(game, action, TROPHY_IDS.JUMPING_JACK_FLASH);
         return;
     }
 
+    if (!(player.State & PLAYER_STATES.STANDING)) {
+        game.getScore().setMoveCount(game.getScore().getMoveCount() + 2); // jumps cost two moves
+        action.engram.touch = 'From a sitting position, your jump looks like a vicious, four-legged mule kick. Very intimidating!';
+        baselineEngram(action.engram, player, cell, dir);
+        doAddTrophy(game, action, TROPHY_IDS.KICKING_UP_DUST);
+        return;
+    }
+
+    if (cell.isDirOpen(dir)) {
+        if (dir == DIRS.NORTH && (!!(cell.getTags() & TAGS.START) || (nextCell.getExits() != 0 && !!(nextCell.getTags() & TAGS.START)))) {
+            action.engram.touch = format("IT'S LAVA! IT BURNS! THE LAVA IS HOT! OUCH!");
+            action.engram.sight = format("The last thing you see is the lava.  It's almost pretty up close.");
+            action.engram.sound = format('The last thing you hear are the echoes of squeaky screams.');
+            action.engram.smell = format('The last thing you smell is burning fur.');
+            action.engram.taste = format('The last thing you taste is lava. It tastes like chicken.');
+            action.outcome.push("You turn north and and take a flying leap back out through maze entrance, apparently forgetting that it's filling with laval. We told you it would be. At least your death is mercifully quick.");
+            action.outcome.push('YOU HAVE DIED');
+
+            // game over - server function will handle saving and cleanup
+            game.getScore().setMoveCount(game.getScore().getMoveCount() + 2); // jumps cost two moves
+            game.getPlayer().Location = new Pos(game.getMaze().getStartCell().row, game.getMaze().getStartCell().col);
+            game.getScore().setGameResult(GAME_RESULTS.DEATH_LAVA);
+            game.setState(GAME_STATES.FINISHED);
+            game.getPlayer().addState(PLAYER_STATES.DEAD);
+            doAddTrophy(game, action, TROPHY_IDS.WISHFUL_DYING);
+            return;
+        } else if (dir == DIRS.SOUTH && (!!(cell.getTags() & TAGS.FINISH) || (nextCell.getExits() != 0 && !!(nextCell.getTags() & TAGS.FINISH)))) {
+            action.engram.touch = format('The cool air of the lab washes over your tired body as you safely exit the maze.');
+            action.engram.sight = format('The cold, harsh lights of the lab are almost blinding, but you see the shadow of a giant approaching.');
+            action.engram.sound = format('The cheering and applause of the scientist is so loud that it hurts your ears.');
+            action.engram.smell = format("Your nose twitches as it's assaulted by the smells of iodine, rubbing alcohol, betadine, and caramel-mocha frappuccino.");
+            action.engram.taste = format('You can already taste the cheese that you know is waiting for you in your cage!');
+            action.outcome.push(format('Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientist gently picks you up and carries you back to your cage.', game.getMaze().getSeed(), game.getScore().getMoveCount()));
+
+            // game over - server function will handle saving and cleanup
+            game.getPlayer().Location = new Pos(game.getMaze().getFinishCell().row, game.getMaze().getFinishCell().col);
+            game.getScore().setMoveCount(game.getScore().getMoveCount() + 2); // jumps cost two moves
+            game.getScore().setGameResult(GAME_RESULTS.WIN);
+            game.setState(GAME_STATES.FINISHED);
+            doAddTrophy(game, action, TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER);
+
+            if (game.getMaze().getShortestPathLength() == game.getScore().getMoveCount()) {
+                doAddTrophy(game, action, TROPHY_IDS.FLAWLESS_VICTORY);
+                game.getScore().setGameResult(GAME_RESULTS.WIN_FLAWLESS);
+                action.outcome.push(format("You just had a PERFECT RUN through %s! Are your whiskers smoking? Why don't you move on to something harder..."), game.getMaze().getSeed());
+            }
+
+            return;
+        } else {
+            // jump didn't end the game
+            if (nextCell.isDirOpen(dir)) {
+                // jump was safe
+
+                // udpate game vars for the cell we're jumping over
+                game.getScore().addMove();
+                game.getPlayer().Location = nextCell.getPos();
+                nextCell.addVisit(game.getScore().getMoveCount());
+                if (nextCell.getVisitCount() > 1) game.getScore().addBacktrack();
+
+                // render an engram for the cell we fly through
+                action.engram.sight = 'As you fly through the room... ' + doSee(player, nextCell, DIRS.NONE);
+                action.engram.touch = 'As you fly through the room... ' + doFeel(player, nextCell, DIRS.NONE);
+                action.engram.sound = 'As you fly through the room... ' + doHear(player, nextCell, DIRS.NONE);
+                action.engram.smell = 'As you fly through the room... ' + doSmell(player, nextCell, DIRS.NONE);
+                action.engram.taste = 'As you fly through the room... ' + doTaste(player, nextCell, DIRS.NONE);
+
+                // give that mouse a cookie!
+                if (!!(nextCell.getTags() & TAGS.TRAP_BEARTRAP) || !!(nextCell.getTags() & TAGS.TRAP_FLAMETHOWER) || !!(nextCell.getTags() & TAGS.TRAP_PIT) || !!(nextCell.getTags() & TAGS.TRAP_TARPIT)) {
+                    doAddTrophy(game, action, TROPHY_IDS.MIGHTY_MOUSE);
+                }
+
+                // and again for the cell we're landing in
+                game.getScore().addMove();
+                game.getPlayer().Location = nextNextCell.getPos();
+                nextNextCell.addVisit(game.getScore().getMoveCount());
+                if (nextNextCell.getVisitCount() > 1) game.getScore().addBacktrack();
+
+                // render engram for the cell we land in
+                action.engram.sight = action.engram.sight + doSee(player, nextNextCell, DIRS.NONE);
+                action.engram.touch = action.engram.touch + doFeel(player, nextNextCell, DIRS.NONE);
+                action.engram.sound = action.engram.sound + doHear(player, nextNextCell, DIRS.NONE);
+                action.engram.smell = action.engram.smell + doSmell(player, nextNextCell, DIRS.NONE);
+                action.engram.taste = action.engram.taste + doTaste(player, nextNextCell, DIRS.NONE);
+                return;
+            } else {
+                // HIT A WALL
+                action.engram.sight = format('You see stars as you leap through the next room and smash into the wall to the %s.', getDirName(dir));
+                action.engram.touch = 'You feel the air rush by as you fly through the room, then pain as you fly into the wall on the other side.';
+                action.engram.sound = 'You hear the air rushing by as you fly through the room, then only a sharp ringing as you hit the wall.';
+                action.engram.smell = 'You smell blood after flying through the room and directly into the wall on the other side.  Is your nose broken?';
+                action.engram.taste = 'You taste blood after biting your tongue when you jumped through the room and into the wall on the other side.';
+
+                game.getScore().addMove();
+                game.getPlayer().Location = nextCell.getPos(); // still move into the next cell if we hit a wall at the end of it
+                // bad jumps add stun AND sitting states
+                // stun wears off after one turn
+                player.addState(PLAYER_STATES.SITTING);
+                player.addState(PLAYER_STATES.STUNNED);
+
+                action.outcome.push(format('You JUMPED into the wall to the %s. OUCH! The impact rattles your bones and you fall to a heap on the floor, stunned.', DIRS[dir]));
+                doAddTrophy(game, action, TROPHY_IDS.YOU_FOUGHT_THE_WALL);
+                return;
+            } // next-next cell open
+        } // next cell open
+    } // next cell not open
+
+    // HIT A WALL
+    action.engram.sight = format('You see stars as jump rightinto the wall to the %s.', getDirName(dir));
+    action.engram.touch = 'You feel your bones rattle as you collide with the wall.';
+    action.engram.sound = 'You hear a sharp ringing as you hit the wall.';
+    action.engram.smell = 'You smell blood after you jump into the wall.  Is your nose broken?';
+    action.engram.taste = 'You taste blood after biting your tongue as you jump into the wall.';
+
+    game.getScore().addMove();
+    // bad jumps add stun AND sitting states
+    // stun wears off after one turn
+    player.addState(PLAYER_STATES.SITTING);
+    player.addState(PLAYER_STATES.STUNNED);
+
+    action.outcome.push(format('You JUMPED into the wall to the %s. OUCH! The impact rattles your bones and you fall to a heap on the floor, stunned.', DIRS[dir]));
+    doAddTrophy(game, action, TROPHY_IDS.YOU_FOUGHT_THE_WALL);
     log.debug(__filename, 'doJump()', format('Player jumps %s.', DIRS[dir]));
 }
 
@@ -96,9 +256,14 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
     let cell = game.getMaze().getCell(player.Location);
 
     // NO DIRECTION
-    if (dir == DIRS.NONE) {
+    if (dir == DIRS.NONE && !(player.State & PLAYER_STATES.SITTING)) {
+        let nmIdx = Math.floor(Math.random() * nullMotions.length);
+
         game.getScore().addMove();
-        action.engram.touch = nullMotions[Math.floor(Math.random() * nullMotions.length)];
+        action.engram.touch = nullMotions[nmIdx];
+        if ((nmIdx = nullMotions.length - 1)) {
+            player.addState(PLAYER_STATES.SITTING);
+        }
         baselineEngram(action.engram, player, cell, dir);
         doAddTrophy(game, action, TROPHY_IDS.WASTED_TIME);
         return;
@@ -172,7 +337,7 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
         action.engram.sight = format('You see stars as you crash headlong into the wall to the %s.', getDirName(dir));
         action.engram.touch = 'You feel the rough stone wall refusing to let you walk through it.';
         action.engram.sound = 'You hear a ringing in your ears after smashing into the wall.';
-        action.engram.smell = 'You smell blood after smaching your nose against the all.';
+        action.engram.smell = 'You smell blood after smashing your nose against the all.';
         action.engram.taste = 'You taste the regret of a wasted turn.';
 
         game.getScore().addMove();

@@ -534,40 +534,41 @@ function startServer() {
                 };
                 // now remove turn-based states that might have been set in the last turn
                 if (!!(game.getPlayer().State & Enums_1.PLAYER_STATES.STUNNED)) {
-                    game.getPlayer().removeState(Enums_1.PLAYER_STATES.STUNNED);
-                    log.debug(__filename, req.url, 'Player STUNNED state Removed.');
+                    act.doStunned(game, dir, action);
                 }
-                // perform the appropriate action
-                switch (argAct) {
-                    case 'MOVE': {
-                        act.doMove(game, dir, action);
-                        break;
-                    }
-                    case 'JUMP': {
-                        act.doJump(game, dir, action);
-                        break;
-                    }
-                    case 'WRITE': {
-                        if (req.query.message === undefined) {
-                            log.warn(__filename, req.url, 'Message argument not supplied for action WRITE, aborting action.');
-                            return res.status(400).json({ status: 'Message is required for ?act=write. Try ?act=write&dir=none&message=Hello%20World' });
+                else {
+                    // perform the appropriate action
+                    switch (argAct) {
+                        case 'MOVE': {
+                            act.doMove(game, dir, action);
+                            break;
                         }
-                        // get the message and clean it up
-                        let message = req.query.message + '';
-                        message = message.trim();
-                        // write it
-                        act.doWrite(game, dir, action, message);
-                        break;
-                    }
-                    case 'LOOK': {
-                        // looking into another room is free, but looking in dir.none or at a wall costs a move
-                        act.doLook(game, dir, action);
-                        break;
-                    }
-                    case 'STAND': {
-                        // looking into another room is free, but looking in dir.none or at a wall costs a move
-                        act.doStand(game, dir, action);
-                        break;
+                        case 'JUMP': {
+                            act.doJump(game, dir, action);
+                            break;
+                        }
+                        case 'WRITE': {
+                            if (req.query.message === undefined) {
+                                log.warn(__filename, req.url, 'Message argument not supplied for action WRITE, aborting action.');
+                                return res.status(400).json({ status: 'Message is required for ?act=write. Try ?act=write&dir=none&message=Hello%20World' });
+                            }
+                            // get the message and clean it up
+                            let message = req.query.message + '';
+                            message = message.trim();
+                            // write it
+                            act.doWrite(game, dir, action, message);
+                            break;
+                        }
+                        case 'LOOK': {
+                            // looking into another room is free, but looking in dir.none or at a wall costs a move
+                            act.doLook(game, dir, action);
+                            break;
+                        }
+                        case 'STAND': {
+                            // looking into another room is free, but looking in dir.none or at a wall costs a move
+                            act.doStand(game, dir, action);
+                            break;
+                        }
                     }
                 }
                 // refresh some duplicated action values
