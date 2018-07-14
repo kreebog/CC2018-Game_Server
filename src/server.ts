@@ -281,6 +281,66 @@ function findMaze(mazeId: string): Maze {
     throw new Error('Maze not found: ' + mazeId);
 }
 
+function newTeamGame(mazeId: string, teamId: string, forcedGameId: string): any {
+    let fnName = format('newTeamGame(%s, %s, %s)', mazeId, teamId, forcedGameId);
+    let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
+    let maze: Maze;
+    let team: Team;
+
+    // get the maze
+    try {
+        maze = findMaze(mazeId); // throws error if not found
+    } catch (err) {
+        log.warn(__filename, fnName, 'Maze not found in Maze Cache: ' + mazeId);
+        return { status: 'Unable to create game.  Maze not found: ' + mazeId };
+    }
+
+    // get the team
+    try {
+        team = new Team(getTeamData(teamId)); // throws error if not found
+    } catch (err) {
+        log.warn(__filename, fnName, 'Team not found in Team Cache: ' + teamId);
+        return { status: 'Unable to create game.  Team not found: ' + teamId };
+    }
+
+    // create player and score objects
+    let player: Player = new Player(maze.getStartCell(), PLAYER_STATES.STANDING);
+    let score: Score = new Score();
+
+    // configure game
+    let game: Game = new Game(maze, team, player, score);
+
+    // set game state to new
+    game.setState(GAME_STATES.NEW);
+
+    // set the score key elements
+    game.getScore().setMazeId(game.getMaze().getId());
+    game.getScore().setTeamId(game.getTeam().getId());
+    game.getScore().setGameId(game.getId());
+
+    // add a visit to the start cell
+    game.getMaze()
+        .getCell(game.getPlayer().Location)
+        .addVisit(0);
+
+    // handle forced game id override
+    if (forcedGameId != '') {
+        log.warn(__filename, fnName, 'New Game(): ID generation overridden with: ' + forcedGameId);
+        game.forceSetId(forcedGameId);
+        game.getScore().setGameId(forcedGameId); // update score key
+    }
+
+    // make some room in the games array if it's full
+    gcGames();
+
+    // store the game
+    games.push(game);
+
+    // log and return status
+    log.info(__filename, fnName, 'New game added to games list: ' + game.getId());
+    return { status: 'Game created.', url: gameUrl + game.getId() };
+}
+
 function startServer() {
     // open the service port
     httpServer = app.listen(consts.GAME_SVC_PORT, function() {
@@ -348,7 +408,7 @@ function startServer() {
          * Sends JSON list of all current, active games with url to full /get/GameId link
          */
         app.get('/games', function(req, res) {
-            log.debug(__filename, req.url, 'Returning list of active games (stub data).');
+            log.trace(__filename, req.url, 'Returning list of active games (stub data).');
             let data = new Array();
 
             // only return active games
@@ -366,7 +426,7 @@ function startServer() {
          * Sends JSON list of ALL game stubs full /get/GameId link
          */
         app.get('/games/all', function(req, res) {
-            log.debug(__filename, req.url, 'Returning list of all games (stub data).');
+            log.debug(__filename, req.url, 'Returning list of ALL games (stub data).');
             let data = new Array();
 
             // only return active games
@@ -391,6 +451,12 @@ function startServer() {
             });
         });
 
+        // old end point
+        app.get(['/game/abort/:gameId/', '/game/abandon/:gameId/'], function(req, res) {
+            res.status(401).json({ status: 'Password is required. Try again using /game/abort/<gameId>/<password>' });
+        });
+
+        // cancel a game in progress
         app.get(['/game/abort/:gameId/:password', '/game/abandon/:gameId/:password'], function(req, res) {
             let gameId = req.params.gameId;
 
@@ -415,6 +481,7 @@ function startServer() {
             try {
                 // create and return a new game against the given maze
                 let teamId = req.params.teamId;
+                let mazeId = req.params.mazeId;
                 let gameId = getActiveGameIdByTeam(teamId);
                 let forcedGameId = req.params.forcedGameId !== undefined ? req.params.forcedGameId : '';
                 let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
@@ -428,55 +495,11 @@ function startServer() {
                 // check for a forced game id
                 if (forcedGameId != '' && isGameInProgress(forcedGameId)) {
                     log.debug(__filename, req.url, format('Game %s already exists - force a different gameId.', forcedGameId));
-                    return res.status(400).json({ status: format('Game %s already exists - force a differeng gameId.', forcedGameId), url: gameUrl + forcedGameId });
+                    return res.status(400).json({ status: format('Game %s already exists - force a different gameId.', forcedGameId), url: gameUrl + forcedGameId });
                 }
 
-                // create the game's objects
-                let maze: Maze = findMaze(req.params.mazeId);
-                let player: Player = new Player(maze.getStartCell(), PLAYER_STATES.STANDING);
-                let team: Team = new Team(getTeamData(teamId));
-                let score: Score = new Score();
-
-                // configure them
-                if (team) {
-                    let game: Game = new Game(maze, team, player, score);
-
-                    // game state is new game
-                    game.setState(GAME_STATES.NEW);
-
-                    // set the score key elements
-                    game.getScore().setMazeId(game.getMaze().getId());
-                    game.getScore().setTeamId(game.getTeam().getId());
-                    game.getScore().setGameId(game.getId());
-
-                    // add a visit to the start cell
-                    game.getMaze()
-                        .getCell(game.getPlayer().Location)
-                        .addVisit(0);
-
-                    // handle forced game id override
-                    if (forcedGameId != '') {
-                        log.warn(__filename, req.url, 'New Game(): ID generation overridden with: ' + forcedGameId);
-                        game.forceSetId(forcedGameId);
-                        game.getScore().setGameId(forcedGameId); // update score key
-                    }
-
-                    // make some room in the games array if it's full
-                    gcGames();
-
-                    // store the game
-                    games.push(game);
-
-                    // return and log
-                    res.json({ status: 'Game created.', url: gameUrl + game.getId() });
-                    log.info(__filename, req.url, 'New game added to games list: ' + game.getId());
-                } else {
-                    log.error(__filename, req.url, 'Unable to add new game. Invalid teamId: ' + teamId);
-                    // bad request (400)
-                    res.status(400).json({ status: format('Invalid teamId: %s', teamId) });
-                }
-
-                //let game: Game = new Game(maze, team, new Score());
+                // create new Team Game
+                res.json(newTeamGame(mazeId, teamId, forcedGameId));
             } catch (err) {
                 log.error(__filename, req.url, 'Error creating game: ' + err.toString());
                 res.status(500).json({ status: format('Error creating game: %s', err.toString()) });
@@ -491,6 +514,8 @@ function startServer() {
          * new state.
          */
         app.get(['/game/action/:gameId', '/game/action/:gameId/:botId'], function(req, res) {
+            let start = Date.now();
+
             try {
                 // make sure we have the right arguments
                 if (req.query.act === undefined || req.params.gameId === undefined || req.params.gameId === 'undefined') {
@@ -535,28 +560,33 @@ function startServer() {
                 // now remove turn-based states that might have been set in the last turn
                 if (!!(game.getPlayer().State & PLAYER_STATES.STUNNED)) {
                     game.getPlayer().removeState(PLAYER_STATES.STUNNED);
-                    log.debug(__filename, req.url, 'PLAYER.STUNNED Removed.');
+                    log.debug(__filename, req.url, 'Player STUNNDED state Removed.');
                 }
 
                 // perform the appropriate action
                 switch (argAct) {
                     case 'MOVE': {
+                        log.debug(__filename, req.url, format('Calling doMove(%s)', DIRS[dir]));
                         act.doMove(game, dir, action);
                         break;
                     }
                     case 'JUMP': {
+                        log.debug(__filename, req.url, format('Calling doJump(%s)', DIRS[dir]));
                         break;
                     }
                     case 'WRITE': {
+                        log.debug(__filename, req.url, format('doWrite() NOT IMPLEMENTED'));
                         break;
                     }
                     case 'LOOK': {
                         // looking into another room is free, but looking in dir.none or at a wall costs a move
+                        log.debug(__filename, req.url, format('Calling doLook(%s)', DIRS[dir]));
                         act.doLook(game, dir, action);
                         break;
                     }
                     case 'STAND': {
                         // looking into another room is free, but looking in dir.none or at a wall costs a move
+                        log.debug(__filename, req.url, format('Calling doStand()'));
                         act.doStand(game, dir, action);
                         break;
                     }
@@ -568,15 +598,18 @@ function startServer() {
 
                 // store the action on the game action stack and return it to the requester as json
                 game.addAction(action);
-                res.json(action);
 
                 // handle game end states
                 if (game.getState() > GAME_STATES.IN_PROGRESS) {
                     log.debug(__filename, req.url, format('Game [%s] with result [%s]', GAME_STATES[game.getState()], GAME_RESULTS[game.getScore().getGameResult()]));
                     request.doPost(consts.SCORE_SVC_URL + '/score', game.getScore(), function handlePostScore(res: any, body: any) {
-                        log.debug(__filename, req.url, format('Score saved.'));
+                        log.debug(__filename, req.url, format('New score posted to DB -> Scores collection.'));
                     });
                 }
+
+                // log action response
+                log.debug(__filename, req.url, format('Action %s completed in %sms. Sending response.', argAct, Date.now() - start));
+                res.json(action);
             } catch (err) {
                 log.error(__filename, req.url, 'Error executing action: ' + err.stack);
                 res.status(500).json({ status: err.toString() });
