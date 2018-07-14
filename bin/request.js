@@ -58,4 +58,31 @@ function doPost(url, body, callback) {
     });
 }
 exports.doPost = doPost;
+/**
+ * Wraps http request functionality in a call-back enabled function
+ *
+ * @param url - URL to request
+ * @param callback - Callback to send response data to
+ */
+function doPut(url, body, callback) {
+    log.debug(__filename, util_1.format('doPut(%s, %s, %s)', url, body, callback.name), util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
+    let options = {
+        url: url,
+        json: body
+    };
+    request_1.default.put(options, (err, res, body) => {
+        if (err) {
+            log.error(__filename, 'doPut()', util_1.format('Error from %s \n::ERROR INFO:: %s', url, JSON.stringify(err)));
+            return err;
+        }
+        if (res.statusCode != 200) {
+            log.warn(__filename, 'doPut()', util_1.format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
+            return;
+        }
+        // all good, apparently - fire othe callback
+        log.debug(__filename, 'doPut()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
+        callback(res, body);
+    });
+}
+exports.doPut = doPut;
 //# sourceMappingURL=request.js.map

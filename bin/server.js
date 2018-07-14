@@ -544,6 +544,7 @@ function startServer() {
                         break;
                     }
                     case 'JUMP': {
+                        act.doJump(game, dir, action);
                         break;
                     }
                     case 'WRITE': {
@@ -574,11 +575,16 @@ function startServer() {
                 action.location = game.getPlayer().Location;
                 // store the action on the game action stack and return it to the requester as json
                 game.addAction(action);
-                // handle game end states
-                if (game.getState() > cc2018_ts_lib_3.GAME_STATES.IN_PROGRESS) {
+                // handle game end states - don't track scores or trophies on abort
+                if (game.getState() > cc2018_ts_lib_3.GAME_STATES.IN_PROGRESS && game.getState() != cc2018_ts_lib_3.GAME_STATES.ABORTED) {
                     log.debug(__filename, req.url, util_1.format('Game [%s] with result [%s]', cc2018_ts_lib_3.GAME_STATES[game.getState()], cc2018_ts_lib_3.GAME_RESULTS[game.getScore().getGameResult()]));
+                    // save the score
                     request.doPost(consts.SCORE_SVC_URL + '/score', game.getScore(), function handlePostScore(res, body) {
                         log.debug(__filename, req.url, util_1.format('New score posted to DB -> Scores collection.'));
+                    });
+                    // update the team to save trophies
+                    request.doPut(consts.TEAM_SVC_URL + '/team', game.getTeam(), function handlePutTeam(res, body) {
+                        log.debug(__filename, req.url, util_1.format('Team updates put to DB -> Teams collection.'));
                     });
                 }
                 // log action response

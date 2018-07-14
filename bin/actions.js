@@ -76,7 +76,18 @@ function doWrite(game, dir, action, message) {
     log.debug(__filename, 'doWrite()', util_1.format('Player writes [%s] on the floor.', message));
 }
 exports.doWrite = doWrite;
-function doJump(dir) {
+function doJump(game, dir, action) {
+    let player = game.getPlayer();
+    let cell = game.getMaze().getCell(player.Location);
+    return;
+    // NO DIRECTION
+    if (dir == cc2018_ts_lib_1.DIRS.NONE) {
+        game.getScore().addMove();
+        action.engram.touch = nullMotions[Math.floor(Math.random() * nullMotions.length)];
+        baselineEngram(action.engram, player, cell, dir);
+        doAddTrophy(game, action, Enums_1.TROPHY_IDS.WASTED_TIME);
+        return;
+    }
     log.debug(__filename, 'doJump()', util_1.format('Player jumps %s.', cc2018_ts_lib_1.DIRS[dir]));
 }
 exports.doJump = doJump;
@@ -166,7 +177,7 @@ function doMove(game, dir, action) {
         game.getScore().addMove();
         player.addState(Enums_1.PLAYER_STATES.SITTING);
         action.outcome.push(util_1.format('You walked into the wall to the %s. Ouch! The impact knocks you off of your feet.', cc2018_ts_lib_1.DIRS[dir]));
-        action.outcome.push('Trophy Earned: ' + Enums_1.TROPHY_IDS[Enums_1.TROPHY_IDS.YOU_FOUGHT_THE_WALL]);
+        doAddTrophy(game, action, Enums_1.TROPHY_IDS.YOU_FOUGHT_THE_WALL);
         return;
     }
     log.debug(__filename, 'doMove()', util_1.format('Player moves %s.', cc2018_ts_lib_1.DIRS[dir]));
