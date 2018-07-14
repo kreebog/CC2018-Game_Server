@@ -6,7 +6,6 @@ import { Logger, Team, Bot, Game, IGameStub, Maze, Cell, Score, Enums } from 'cc
 import { DIRS, GAME_RESULTS, GAME_STATES, IAction, TAGS } from 'cc2018-ts-lib'; // import classes
 import compression from 'compression';
 import * as act from './actions';
-
 import { format } from 'util';
 import { Server } from 'http';
 import * as request from './request';
@@ -34,12 +33,15 @@ let teams: Array<ITeam> = new Array<ITeam>();
 let games: Array<Game> = new Array<Game>();
 
 // activity tracking vars
-let serviceStarted: boolean = false; // set true when startup() completes successfully
 let lastMazeListFill: number = 0; // updated by Date.now() after cache request fulfillment
 let lastScoreListFill: number = 0; // updated by Date.now() after cache request fulfillment
 let lastTeamListFill: number = 0; // updated by Date.now() after cache request fulfillment
 
+// start the bootstrap - keeps trying until all cache refresh functions return
+let bootstrapTimer = setInterval(bootstrap, 3000);
+
 // Service End Points
+// TODO: I hate this ... should just use consts/env vars
 const EP = {
     mazes: format('%s/%s', consts.MAZE_SVC_URL, 'get'),
     mazeById: format('%s/%s', consts.MAZE_SVC_URL, 'get/:mazeId'),
@@ -108,9 +110,6 @@ function updateMazesCache() {
             loadMazeById(mazeStub.id);
             mazeStub.url = format('%s/maze/%d:%d:%s', consts.GAME_SVC_EXT_URL, mazeStub.height, mazeStub.width, mazeStub.seed);
         });
-
-        // attempt to start the service
-        if (!serviceStarted) bootstrap();
     });
 }
 
@@ -126,9 +125,6 @@ function updateTeamsCache() {
             teams = data;
             log.debug(__filename, 'handleLoadTeams()', format('%d teams loaded into teams array.', teams.length));
         }
-
-        // attempt to start the service
-        if (!serviceStarted) bootstrap();
     });
 }
 
@@ -144,9 +140,6 @@ function udpateScoresCache() {
             scoreList = data;
             log.debug(__filename, 'handleLoadScores()', format('%d scores loaded into scoreList array.', scoreList.length));
         }
-
-        // attempt to start the service
-        if (!serviceStarted) bootstrap();
     });
 }
 
@@ -154,11 +147,28 @@ function udpateScoresCache() {
  * Kicks off the cache refresh interval once base caches are filled
  */
 function bootstrap() {
+    log.debug(__filename, 'bootstrap()', format('Attempting to fill cache arrays before server start...'));
+    if (lastMazeListFill == 0) updateMazesCache();
+    if (lastTeamListFill == 0) updateTeamsCache();
+    if (lastScoreListFill == 0) udpateScoresCache();
+
     if (lastMazeListFill > 0 && lastScoreListFill > 0 && lastTeamListFill > 0) {
         log.debug(__filename, 'bootstrap()', format('Caches populated, starting server.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
+        clearInterval(bootstrapTimer); // kill the timer
         startServer(); // start the express server
     } else {
+        // initialize the server & cache refresh processes
         log.warn(__filename, 'bootstrap()', format('Maze, Score, and Team lists must be populated.  mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
+    }
+}
+
+/**
+ * Removes games from the top of the array to make room for new games at the bottom
+ */
+function gcGames() {
+    while (games.length >= consts.MAX_GAMES_IN_MEMORY) {
+        log.warn(__filename, 'gcGames()', format('games array size limit (%s) reached, removing oldest entry...', consts.MAX_GAMES_IN_MEMORY));
+        games.shift();
     }
 }
 
@@ -271,19 +281,10 @@ function findMaze(mazeId: string): Maze {
     throw new Error('Maze not found: ' + mazeId);
 }
 
-// initialize the server & cache refresh processes
-log.info(__filename, '', 'Starting Game Server v' + consts.APP_VERSION);
-
-updateMazesCache();
-udpateScoresCache();
-updateTeamsCache();
-
 function startServer() {
     // open the service port
     httpServer = app.listen(consts.GAME_SVC_PORT, function() {
         log.info(__filename, 'startServer()', format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT));
-
-        serviceStarted = true;
 
         app.use(compression());
 
@@ -460,6 +461,9 @@ function startServer() {
                         game.getScore().setGameId(forcedGameId); // update score key
                     }
 
+                    // make some room in the games array if it's full
+                    gcGames();
+
                     // store the game
                     games.push(game);
 
@@ -569,7 +573,7 @@ function startServer() {
                 // handle game end states
                 if (game.getState() > GAME_STATES.IN_PROGRESS) {
                     log.debug(__filename, req.url, format('Game [%s] with result [%s]', GAME_STATES[game.getState()], GAME_RESULTS[game.getScore().getGameResult()]));
-                    request.doPut(consts.SCORE_SVC_URL + '/score', JSON.stringify(game.getScore()), function handlePutScore(res: any, body: any) {
+                    request.doPost(consts.SCORE_SVC_URL + '/score', game.getScore(), function handlePostScore(res: any, body: any) {
                         log.debug(__filename, req.url, format('Score saved.'));
                     });
                 }

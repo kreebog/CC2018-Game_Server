@@ -13,7 +13,7 @@ const log = Logger.getInstance();
  * @param callback - Callback to send response data to
  */
 export function doGet(url: string, callback: Function) {
-    log.trace(__filename, 'doGet()', format('Requesting [%s] with callback to [%s]', url, callback.name));
+    log.debug(__filename, 'doGet()', format('Requesting [%s] with callback to [%s]', url, callback.name));
 
     request(url, (err, res, body) => {
         if (err) {
@@ -27,7 +27,7 @@ export function doGet(url: string, callback: Function) {
         }
 
         // all good, apparently - fire othe callback
-        log.trace(__filename, 'doGet()', format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
+        log.debug(__filename, 'doGet()', format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
         callback(res, body);
     });
 }
@@ -38,22 +38,26 @@ export function doGet(url: string, callback: Function) {
  * @param url - URL to request
  * @param callback - Callback to send response data to
  */
-export function doPut(url: string, body: string, callback: Function) {
-    log.trace(__filename, 'doPut()', format('Requesting [%s] with callback to [%s]', url, callback.name));
+export function doPost(url: string, body: any, callback: Function) {
+    log.debug(__filename, format('doPost(%s, %s, %s)', url, body, callback.name), format('Requesting [%s] with callback to [%s]', url, callback.name));
+    let options = {
+        url: url,
+        json: body
+    };
 
-    request(url, (err, res, body) => {
+    request.post(options, (err, res, body) => {
         if (err) {
-            log.error(__filename, 'doPut()', format('Error from %s \n::ERROR INFO:: %s', url, JSON.stringify(err)));
+            log.error(__filename, 'doPost()', format('Error from %s \n::ERROR INFO:: %s', url, JSON.stringify(err)));
             return err;
         }
 
         if (res.statusCode != 200) {
-            log.warn(__filename, 'doPut()', format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
+            log.warn(__filename, 'doPost()', format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
             return;
         }
 
         // all good, apparently - fire othe callback
-        log.trace(__filename, 'doPut()', format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
+        log.debug(__filename, 'doPost()', format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
         callback(res, body);
     });
 }

@@ -103,7 +103,7 @@ function doMove(game, dir, action) {
             if (game.getMaze().getShortestPathLength() == game.getScore().getMoveCount()) {
                 doAddTrophy(game, action, Enums_1.TROPHY_IDS.FLAWLESS_VICTORY);
                 game.getScore().setGameResult(Enums_1.GAME_RESULTS.WIN_FLAWLESS);
-                action.outcome.push(util_1.format("You just had a PERFECT RUN through %s! Are your whiskers smoking? Why don't you move on to something harder..."));
+                action.outcome.push(util_1.format("You just had a PERFECT RUN through %s! Are your whiskers smoking? Why don't you move on to something harder..."), game.getMaze().getSeed());
             }
             return;
         }
@@ -152,6 +152,7 @@ function doAddTrophy(game, action, trophyId) {
     }
     // add trophy to team - if they already have it, trophy.count is increased
     game.getTeam().addTrophy(trophyId);
+    game.getScore().setBonusPoints(game.getScore().getBonusPoints() + ITrophy_1.Trophies[trophyId].bonusAward);
 }
 exports.doAddTrophy = doAddTrophy;
 function doStand(game, dir, action) {
