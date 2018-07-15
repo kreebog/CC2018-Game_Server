@@ -28,12 +28,15 @@ export function doLook(game: Game, dir: DIRS, action: IAction) {
     let player = game.getPlayer();
     let cell = game.getMaze().getCell(player.Location);
 
-    if (!cell.isDirOpen(dir)) {
+    if (dir != DIRS.NONE && !cell.isDirOpen(dir)) {
         action.engram.sight = format('You stare intently at the wall to the %s and wonder why you wasted a turn.', getDirName(dir));
         doAddTrophy(game, action, TROPHY_IDS.WATCHING_PAINT_DRY);
     } else {
         if (dir == DIRS.NORTH && !!(cell.getTags() & TAGS.START)) {
-            action.engram.sight = format("You gaze longingly at the entrance to the %s, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!");
+            action.engram.sight = format("You gaze longingly at the entrance to the north, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!");
+            doAddTrophy(game, action, TROPHY_IDS.WISHFUL_THINKING);
+        } else if (dir == DIRS.SOUTH && !!(cell.getTags() & TAGS.FINISH)) {
+            action.engram.sight = format("The exit! You've found it!  All you need to do to escape is take one more step south...");
             doAddTrophy(game, action, TROPHY_IDS.WISHFUL_THINKING);
         } else {
             let targetCell: Cell = game.getMaze().getCellNeighbor(cell, dir);
@@ -52,7 +55,7 @@ export function doLook(game: Game, dir: DIRS, action: IAction) {
     return;
 }
 
-export function doWrite(game: Game, dir: DIRS, action: IAction, message: string) {
+export function doWrite(game: Game, action: IAction, message: string) {
     let player = game.getPlayer();
     let cell = game.getMaze().getCell(player.Location);
 
@@ -66,11 +69,11 @@ export function doWrite(game: Game, dir: DIRS, action: IAction, message: string)
         doAddTrophy(game, action, TROPHY_IDS.PAPERBACK_WRITER);
     }
 
-    if (action.engram.sight == '') action.engram.sight = doSee(player, cell, dir);
-    if (action.engram.touch == '') action.engram.touch = doFeel(player, cell, dir);
-    if (action.engram.sound == '') action.engram.sound = doHear(player, cell, dir);
-    if (action.engram.smell == '') action.engram.smell = doSmell(player, cell, dir);
-    if (action.engram.taste == '') action.engram.taste = doTaste(player, cell, dir);
+    if (action.engram.sight == '') action.engram.sight = doSee(player, cell, DIRS.NONE);
+    if (action.engram.touch == '') action.engram.touch = doFeel(player, cell, DIRS.NONE);
+    if (action.engram.sound == '') action.engram.sound = doHear(player, cell, DIRS.NONE);
+    if (action.engram.smell == '') action.engram.smell = doSmell(player, cell, DIRS.NONE);
+    if (action.engram.taste == '') action.engram.taste = doTaste(player, cell, DIRS.NONE);
 
     if (message == 'X') {
         action.outcome.push('You couldn\'t think of what to write, so you just scratch an "X" onto the floor with your claw.');
@@ -136,7 +139,7 @@ export function doJump(game: Game, dir: DIRS, action: IAction) {
     }
 
     if (cell.isDirOpen(dir)) {
-        if (dir == DIRS.NORTH && (!!(cell.getTags() & TAGS.START) || (nextCell.getExits() != 0 && !!(nextCell.getTags() & TAGS.START)))) {
+        if (dir == DIRS.NORTH && (!!(cell.getTags() & TAGS.START) || (nextCell !== undefined && !!(nextCell.getTags() & TAGS.START)))) {
             action.engram.touch = format("IT'S LAVA! IT BURNS! THE LAVA IS HOT! OUCH!");
             action.engram.sight = format("The last thing you see is the lava.  It's almost pretty up close.");
             action.engram.sound = format('The last thing you hear are the echoes of squeaky screams.');
@@ -153,7 +156,7 @@ export function doJump(game: Game, dir: DIRS, action: IAction) {
             game.getPlayer().addState(PLAYER_STATES.DEAD);
             doAddTrophy(game, action, TROPHY_IDS.WISHFUL_DYING);
             return;
-        } else if (dir == DIRS.SOUTH && (!!(cell.getTags() & TAGS.FINISH) || (nextCell.getExits() != 0 && !!(nextCell.getTags() & TAGS.FINISH)))) {
+        } else if (dir == DIRS.SOUTH && (!!(cell.getTags() & TAGS.FINISH) || (nextCell !== undefined && !!(nextCell.getTags() & TAGS.FINISH)))) {
             action.engram.touch = format('The cool air of the lab washes over your tired body as you safely exit the maze.');
             action.engram.sight = format('The cold, harsh lights of the lab are almost blinding, but you see the shadow of a giant approaching.');
             action.engram.sound = format('The cheering and applause of the scientist is so loud that it hurts your ears.');
@@ -187,11 +190,7 @@ export function doJump(game: Game, dir: DIRS, action: IAction) {
                 if (nextCell.getVisitCount() > 1) game.getScore().addBacktrack();
 
                 // render an engram for the cell we fly through
-                action.engram.sight = 'As you fly through the room... ' + doSee(player, nextCell, DIRS.NONE);
-                action.engram.touch = 'As you fly through the room... ' + doFeel(player, nextCell, DIRS.NONE);
-                action.engram.sound = 'As you fly through the room... ' + doHear(player, nextCell, DIRS.NONE);
-                action.engram.smell = 'As you fly through the room... ' + doSmell(player, nextCell, DIRS.NONE);
-                action.engram.taste = 'As you fly through the room... ' + doTaste(player, nextCell, DIRS.NONE);
+                action.outcome.push(format('With a running start, you JUMP to the %s!  You fly through the next room too quickly to notice anything and land nimbly in the room beyond.', getDirName(dir)));
 
                 // give that mouse a cookie!
                 if (!!(nextCell.getTags() & TAGS.TRAP_BEARTRAP) || !!(nextCell.getTags() & TAGS.TRAP_FLAMETHOWER) || !!(nextCell.getTags() & TAGS.TRAP_PIT) || !!(nextCell.getTags() & TAGS.TRAP_TARPIT)) {
@@ -356,11 +355,12 @@ export function doAddTrophy(game: Game, action: IAction, trophyId: TROPHY_IDS) {
 
     // don't show repeated trophies exept for flawless victory
     if (!game.getTeam().hasTrophy(trophyId) && trophyId != TROPHY_IDS.FLAWLESS_VICTORY) {
-        action.outcome.push('Trophy Earned: ' + Trophies[trophyId].name);
+        action.outcome.push('NEW TROPHY: ' + Trophies[trophyId].name);
     }
 
     // add trophy to team - if they already have it, trophy.count is increased
     game.getTeam().addTrophy(trophyId);
+    action.trophies.push(Trophies[trophyId]);
     game.getScore().setBonusPoints(game.getScore().getBonusPoints() + Trophies[trophyId].bonusAward);
 }
 

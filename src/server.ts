@@ -1,7 +1,8 @@
 require('dotenv').config();
+let bodyParser = require('body-parser');
 import path from 'path';
 import * as consts from './consts';
-import { IMazeStub, IMaze, ICell, IScore, ITeam, IEngram, Pos, Player } from 'cc2018-ts-lib'; // import class interfaces
+import { IMazeStub, IMaze, ICell, IScore, ITeam, IEngram, Pos, Player, ITrophy } from 'cc2018-ts-lib'; // import class interfaces
 import { Logger, Team, Bot, Game, IGameStub, Maze, Cell, Score, Enums } from 'cc2018-ts-lib'; // import classes
 import { DIRS, GAME_RESULTS, GAME_STATES, IAction, TAGS } from 'cc2018-ts-lib'; // import classes
 import compression from 'compression';
@@ -202,8 +203,8 @@ function getGame(gameId: string) {
         }
     }
 
-    log.debug(__filename, 'getGame()', 'Game not found: ' + gameId);
-    throw new Error('Game Not Found: ' + gameId);
+    log.debug(__filename, 'getGame()', 'GAME NOT FOUND');
+    throw new Error('GAME NOT FOUND');
 }
 
 /**
@@ -370,6 +371,7 @@ function startServer() {
         log.info(__filename, 'startServer()', format('%s listening on port %d', consts.GAME_SVC_NAME, consts.GAME_SVC_PORT));
 
         app.use(compression());
+        app.use(bodyParser.json());
 
         // allow CORS for this application
         app.use(function(req, res, next) {
@@ -529,6 +531,121 @@ function startServer() {
             }
         });
 
+        app.post('/game/action', function(req, res) {
+            let start = Date.now();
+            let gameId: string = '';
+            log.debug(__filename, req.url, 'Action posted from: ' + req.rawHeaders.join(' :: '));
+            log.debug(__filename, req.url, 'Request Body: ' + JSON.stringify(req.body));
+
+            // {
+            //     "gameId":"c440d650-733e-4db9-9814-59061b737df7",
+            //     "action":"look",
+            //     "direction":"north",
+            //     "message":"test",
+            //     "cohesionScores":[1,0.5,1,0.5,null,null]
+            //  }
+
+            let tmp = { gameId: 'c440d650-733e-4db9-9814-59061b737df7', action: 'look', direction: 'north', message: 'test', cohesionScores: [1, 0.5, 1, 0.5, null, null] };
+
+            //curl -i -X POST http://localhost:8082/game/action -H 'Content-Type: application/json' -d '{"gameId":"c440d650-733e-4db9-9814-59061b737df7","action":"look","direction":"north","message":"test","cohesionScores":[1,0.5,1,0.5,null,null]}'
+            try {
+                // get and parse incoming data
+                let data = req.body;
+
+                gameId = data.gameId;
+                let argAct: string = data.action;
+                let argDir: any = format('%s', data.direction + '').toUpperCase();
+                let message: string = data.message;
+                let botCsn: Array<number> = data.cohesionScores;
+
+                // initialize required elements
+                let game: Game = getGame(gameId);
+
+                let direction: number = parseInt(DIRS[argDir]);
+                argAct = argAct.toUpperCase();
+
+                let action: IAction = {
+                    action: argAct,
+                    mazeId: game.getMaze().getId(),
+                    direction: DIRS[direction],
+                    location: game.getPlayer().Location,
+                    score: game.getScore().toJSON(),
+                    playerState: game.getPlayer().State,
+                    botCohesion: botCsn,
+                    engram: { sight: '', sound: '', smell: '', touch: '', taste: '' },
+                    outcome: new Array<string>(),
+                    trophies: new Array<ITrophy>()
+                };
+
+                // now remove turn-based states that might have been set in the last turn
+                if (!!(game.getPlayer().State & PLAYER_STATES.STUNNED)) {
+                    act.doStunned(game, direction, action);
+                } else {
+                    // perform the appropriate action
+                    switch (argAct) {
+                        case 'MOVE': {
+                            act.doMove(game, direction, action);
+                            break;
+                        }
+                        case 'JUMP': {
+                            act.doJump(game, direction, action);
+                            break;
+                        }
+                        case 'WRITE': {
+                            act.doWrite(game, action, message);
+                            break;
+                        }
+                        case 'LOOK': {
+                            // looking into another room is free, but looking in dir.none or at a wall costs a move
+                            act.doLook(game, direction, action);
+                            break;
+                        }
+                        case 'STAND': {
+                            // looking into another room is free, but looking in dir.none or at a wall costs a move
+                            act.doStand(game, direction, action);
+                            break;
+                        }
+                        default:
+                            return res.status(400).json({ status: 'Invalid action: ' + argAct });
+                    }
+                }
+
+                // refresh some duplicated action values
+                action.score = game.getScore().toJSON();
+                action.location = game.getPlayer().Location;
+
+                // store the action on the game action stack and return it to the requester as json
+                game.addAction(action);
+
+                // handle game end states - don't track scores or trophies on abort
+                if (game.getState() > GAME_STATES.IN_PROGRESS && game.getState() != GAME_STATES.ABORTED) {
+                    log.debug(__filename, req.url, format('Game [%s] with result [%s]', GAME_STATES[game.getState()], GAME_RESULTS[game.getScore().getGameResult()]));
+
+                    // save the score
+                    request.doPost(consts.SCORE_SVC_URL + '/score', game.getScore(), function handlePostScore(res: any, body: any) {
+                        log.debug(__filename, req.url, format('New score posted to DB -> Scores collection.'));
+                    });
+
+                    // update the team to save trophies
+                    request.doPut(consts.TEAM_SVC_URL + '/team', game.getTeam(), function handlePutTeam(res: any, body: any) {
+                        log.debug(__filename, req.url, format('Team updates put to DB -> Teams collection.'));
+                    });
+                }
+
+                // log action response
+                log.debug(__filename, req.url, format('ACTION REQUEST COMPLETED: %s completed in %sms. Sending response.', argAct, Date.now() - start));
+                res.json(action);
+            } catch (err) {
+                if (err.message == 'GAME NOT FOUND') {
+                    log.error(__filename, req.url, format('Game not found: %s', gameId));
+                    res.status(500).json({ status: 'GAME NOT FOUND: ' + gameId });
+                } else {
+                    log.error(__filename, req.url, format('Unable to handle posted action.  Data: %s, Error: %s ', JSON.stringify(req.body), err.stack));
+                    res.status(500).json({ status: 'Unable to handle posted action.', data: req.body, error: err });
+                }
+            }
+        });
+
         /**
          * Performs an action (MOVE, LOOK, JUMP, MARK)
          * Format: /game/action/<gameId>?act=[move|look|jump|write|stand]&[dir|msg]=[direction|message]
@@ -578,7 +695,9 @@ function startServer() {
                     location: game.getPlayer().Location,
                     score: game.getScore().toJSON(),
                     playerState: game.getPlayer().State,
-                    outcome: new Array<string>()
+                    outcome: new Array<string>(),
+                    botCohesion: new Array<number>(),
+                    trophies: new Array<ITrophy>()
                 };
 
                 // now remove turn-based states that might have been set in the last turn
@@ -606,7 +725,7 @@ function startServer() {
                             message = message.trim();
 
                             // write it
-                            act.doWrite(game, dir, action, message);
+                            act.doWrite(game, action, message);
                             break;
                         }
                         case 'LOOK': {

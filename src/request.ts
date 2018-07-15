@@ -56,7 +56,7 @@ export function doPost(url: string, body: any, callback: Function) {
             return;
         }
 
-        // all good, apparently - fire othe callback
+        // all good, apparently - fire the callback
         log.debug(__filename, 'doPost()', format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
         callback(res, body);
     });

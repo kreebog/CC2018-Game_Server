@@ -52,7 +52,7 @@ function doPost(url, body, callback) {
             log.warn(__filename, 'doPost()', util_1.format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
             return;
         }
-        // all good, apparently - fire othe callback
+        // all good, apparently - fire the callback
         log.debug(__filename, 'doPost()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
         callback(res, body);
     });

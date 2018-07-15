@@ -25,13 +25,17 @@ let nullJumps = [
 function doLook(game, dir, action) {
     let player = game.getPlayer();
     let cell = game.getMaze().getCell(player.Location);
-    if (!cell.isDirOpen(dir)) {
+    if (dir != cc2018_ts_lib_1.DIRS.NONE && !cell.isDirOpen(dir)) {
         action.engram.sight = util_1.format('You stare intently at the wall to the %s and wonder why you wasted a turn.', getDirName(dir));
         doAddTrophy(game, action, Enums_1.TROPHY_IDS.WATCHING_PAINT_DRY);
     }
     else {
         if (dir == cc2018_ts_lib_1.DIRS.NORTH && !!(cell.getTags() & Enums_1.TAGS.START)) {
-            action.engram.sight = util_1.format("You gaze longingly at the entrance to the %s, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!");
+            action.engram.sight = util_1.format("You gaze longingly at the entrance to the north, wishing you could go out the way you came in. Too bad it's filled with lava.  Better get moving... IT'S COMING THIS WAY!");
+            doAddTrophy(game, action, Enums_1.TROPHY_IDS.WISHFUL_THINKING);
+        }
+        else if (dir == cc2018_ts_lib_1.DIRS.SOUTH && !!(cell.getTags() & Enums_1.TAGS.FINISH)) {
+            action.engram.sight = util_1.format("The exit! You've found it!  All you need to do to escape is take one more step south...");
             doAddTrophy(game, action, Enums_1.TROPHY_IDS.WISHFUL_THINKING);
         }
         else {
@@ -53,7 +57,7 @@ function doLook(game, dir, action) {
     return;
 }
 exports.doLook = doLook;
-function doWrite(game, dir, action, message) {
+function doWrite(game, action, message) {
     let player = game.getPlayer();
     let cell = game.getMaze().getCell(player.Location);
     // add the note to the wrong
@@ -65,15 +69,15 @@ function doWrite(game, dir, action, message) {
         doAddTrophy(game, action, Enums_1.TROPHY_IDS.PAPERBACK_WRITER);
     }
     if (action.engram.sight == '')
-        action.engram.sight = doSee(player, cell, dir);
+        action.engram.sight = doSee(player, cell, cc2018_ts_lib_1.DIRS.NONE);
     if (action.engram.touch == '')
-        action.engram.touch = doFeel(player, cell, dir);
+        action.engram.touch = doFeel(player, cell, cc2018_ts_lib_1.DIRS.NONE);
     if (action.engram.sound == '')
-        action.engram.sound = doHear(player, cell, dir);
+        action.engram.sound = doHear(player, cell, cc2018_ts_lib_1.DIRS.NONE);
     if (action.engram.smell == '')
-        action.engram.smell = doSmell(player, cell, dir);
+        action.engram.smell = doSmell(player, cell, cc2018_ts_lib_1.DIRS.NONE);
     if (action.engram.taste == '')
-        action.engram.taste = doTaste(player, cell, dir);
+        action.engram.taste = doTaste(player, cell, cc2018_ts_lib_1.DIRS.NONE);
     if (message == 'X') {
         action.outcome.push('You couldn\'t think of what to write, so you just scratch an "X" onto the floor with your claw.');
     }
@@ -133,7 +137,7 @@ function doJump(game, dir, action) {
         return;
     }
     if (cell.isDirOpen(dir)) {
-        if (dir == cc2018_ts_lib_1.DIRS.NORTH && (!!(cell.getTags() & Enums_1.TAGS.START) || (nextCell.getExits() != 0 && !!(nextCell.getTags() & Enums_1.TAGS.START)))) {
+        if (dir == cc2018_ts_lib_1.DIRS.NORTH && (!!(cell.getTags() & Enums_1.TAGS.START) || (nextCell !== undefined && !!(nextCell.getTags() & Enums_1.TAGS.START)))) {
             action.engram.touch = util_1.format("IT'S LAVA! IT BURNS! THE LAVA IS HOT! OUCH!");
             action.engram.sight = util_1.format("The last thing you see is the lava.  It's almost pretty up close.");
             action.engram.sound = util_1.format('The last thing you hear are the echoes of squeaky screams.');
@@ -150,7 +154,7 @@ function doJump(game, dir, action) {
             doAddTrophy(game, action, Enums_1.TROPHY_IDS.WISHFUL_DYING);
             return;
         }
-        else if (dir == cc2018_ts_lib_1.DIRS.SOUTH && (!!(cell.getTags() & Enums_1.TAGS.FINISH) || (nextCell.getExits() != 0 && !!(nextCell.getTags() & Enums_1.TAGS.FINISH)))) {
+        else if (dir == cc2018_ts_lib_1.DIRS.SOUTH && (!!(cell.getTags() & Enums_1.TAGS.FINISH) || (nextCell !== undefined && !!(nextCell.getTags() & Enums_1.TAGS.FINISH)))) {
             action.engram.touch = util_1.format('The cool air of the lab washes over your tired body as you safely exit the maze.');
             action.engram.sight = util_1.format('The cold, harsh lights of the lab are almost blinding, but you see the shadow of a giant approaching.');
             action.engram.sound = util_1.format('The cheering and applause of the scientist is so loud that it hurts your ears.');
@@ -181,11 +185,7 @@ function doJump(game, dir, action) {
                 if (nextCell.getVisitCount() > 1)
                     game.getScore().addBacktrack();
                 // render an engram for the cell we fly through
-                action.engram.sight = 'As you fly through the room... ' + doSee(player, nextCell, cc2018_ts_lib_1.DIRS.NONE);
-                action.engram.touch = 'As you fly through the room... ' + doFeel(player, nextCell, cc2018_ts_lib_1.DIRS.NONE);
-                action.engram.sound = 'As you fly through the room... ' + doHear(player, nextCell, cc2018_ts_lib_1.DIRS.NONE);
-                action.engram.smell = 'As you fly through the room... ' + doSmell(player, nextCell, cc2018_ts_lib_1.DIRS.NONE);
-                action.engram.taste = 'As you fly through the room... ' + doTaste(player, nextCell, cc2018_ts_lib_1.DIRS.NONE);
+                action.outcome.push(util_1.format('With a running start, you JUMP to the %s!  You fly through the next room too quickly to notice anything and land nimbly in the room beyond.', getDirName(dir)));
                 // give that mouse a cookie!
                 if (!!(nextCell.getTags() & Enums_1.TAGS.TRAP_BEARTRAP) || !!(nextCell.getTags() & Enums_1.TAGS.TRAP_FLAMETHOWER) || !!(nextCell.getTags() & Enums_1.TAGS.TRAP_PIT) || !!(nextCell.getTags() & Enums_1.TAGS.TRAP_TARPIT)) {
                     doAddTrophy(game, action, Enums_1.TROPHY_IDS.MIGHTY_MOUSE);
@@ -339,10 +339,11 @@ function doAddTrophy(game, action, trophyId) {
     log.debug(__filename, 'doAddTrophy()', util_1.format('Trophy Awarded: [%s]', Enums_1.TROPHY_IDS[trophyId]));
     // don't show repeated trophies exept for flawless victory
     if (!game.getTeam().hasTrophy(trophyId) && trophyId != Enums_1.TROPHY_IDS.FLAWLESS_VICTORY) {
-        action.outcome.push('Trophy Earned: ' + ITrophy_1.Trophies[trophyId].name);
+        action.outcome.push('NEW TROPHY: ' + ITrophy_1.Trophies[trophyId].name);
     }
     // add trophy to team - if they already have it, trophy.count is increased
     game.getTeam().addTrophy(trophyId);
+    action.trophies.push(ITrophy_1.Trophies[trophyId]);
     game.getScore().setBonusPoints(game.getScore().getBonusPoints() + ITrophy_1.Trophies[trophyId].bonusAward);
 }
 exports.doAddTrophy = doAddTrophy;
