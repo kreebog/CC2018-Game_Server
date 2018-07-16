@@ -22,7 +22,7 @@ let nullJumps = [
     'You do some jumping jacks.  Is this really the best time to work on your cardio?',
     'You try to see if you can jump high enough to touch the ceiling. Nope. Not even close.',
     'You jump around. Jump around. Jump up, jump up, and get down.',
-    'You decide to try to do a backflip and fail miserably, landing in a heap on the floor.'
+    'You decide to try to do a back flip and fail miserably, landing in a heap on the floor.'
 ];
 
 export function doLook(game: Game, dir: DIRS, action: IAction) {
@@ -199,7 +199,7 @@ export function doJump(game: Game, dir: DIRS, action: IAction) {
             if (nextCell.isDirOpen(dir)) {
                 // jump was safe
 
-                // udpate game vars for the cell we're jumping over
+                // update game vars for the cell we're jumping over
                 game.getScore().addMove();
                 game.getPlayer().Location = nextCell.getPos();
                 nextCell.addVisit(game.getScore().getMoveCount());
@@ -236,7 +236,7 @@ export function doJump(game: Game, dir: DIRS, action: IAction) {
                     game.setState(GAME_STATES.FINISHED);
                     game.getPlayer().addState(PLAYER_STATES.DEAD);
                     doAddTrophy(game, action, TROPHY_IDS.TOO_HOT_TO_HANDLE);
-                    action.outcome.push('Your beautiful jump should have ended in a beautiful landing, but instead you slipped in a pool of kerosene, landed on the detonator, and blew yourself to smitherines.');
+                    action.outcome.push('Your beautiful jump should have ended in a beautiful landing, but instead you slipped in a pool of kerosene, landed on the detonator, and blew yourself to smithereens.');
                     action.outcome.push('YOU HAVE DIED');
                 }
 
@@ -271,7 +271,7 @@ export function doJump(game: Game, dir: DIRS, action: IAction) {
     } // next cell not open
 
     // HIT A WALL
-    action.engram.sight = format('You see stars as jump rightinto the wall to the %s.', getDirName(dir));
+    action.engram.sight = format('You see stars as jump right into the wall to the %s.', getDirName(dir));
     action.engram.touch = 'You feel your bones rattle as you collide with the wall.';
     action.engram.sound = 'You hear a sharp ringing as you hit the wall.';
     action.engram.smell = 'You smell blood after you jump into the wall.  Is your nose broken?';
@@ -414,7 +414,7 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
 export function doAddTrophy(game: Game, action: IAction, trophyId: TROPHY_IDS) {
     log.debug(__filename, 'doAddTrophy()', format('Trophy Awarded: [%s]', TROPHY_IDS[trophyId]));
 
-    // don't show repeated trophies exept for flawless victory
+    // don't show repeated trophies except for flawless victory
     if (!game.getTeam().hasTrophy(trophyId) && trophyId != TROPHY_IDS.FLAWLESS_VICTORY) {
         action.outcome.push('NEW TROPHY: ' + Trophies[trophyId].name);
     }
@@ -477,7 +477,7 @@ function doSeeNext(cell: Cell, dir: DIRS, ambientMode: boolean): string {
     if (ambientMode) {
         // only return ambient sense data
         if (!!(cell.getTags() & TAGS.START)) {
-            ret = format(' A faint, red glow barlely illuminates the room.');
+            ret = format(' A faint, red glow barely illuminates the room.');
         } else if (!!(cell.getTags() & TAGS.FINISH)) {
             ret = format(' A faint, cool light barely illuminates the room.');
         }

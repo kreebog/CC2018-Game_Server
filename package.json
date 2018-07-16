@@ -22,7 +22,7 @@
         "@types/collections": "^5.0.0",
         "@types/request": "^2.47.1",
         "body-parser": "^1.18.3",
-        "cc2018-ts-lib": "^1.4.5",
+        "cc2018-ts-lib": "^1.4.51",
         "collections": "^5.1.4",
         "compression": "^1.7.3",
         "dotenv": "^6.0.0",
