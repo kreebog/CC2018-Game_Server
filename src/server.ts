@@ -183,6 +183,15 @@ function gcGames() {
             }
         });
 
+        while (games.length >= gcTrigger) {
+            let deletedGame = games.shift();
+            if (deletedGame !== undefined ) {
+                log.warn(__filename, 'gcGames()', format('FORCE DELETION of active Game [%s] from games array.', deletedGame.getId()));
+            } else {
+                log.warn(__filename, 'gcGames()', format('FORCE DELETION of active Game from games array.'));
+            }
+        }
+
         // reassign the games array
         log.debug(__filename, 'gcGames()', format('Collection complete. GC_TriggerSize: %s, Original Size: %s, New Size: %s', gcTrigger, games.length, cleanGames.length));
         games = cleanGames;
