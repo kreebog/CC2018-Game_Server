@@ -593,9 +593,9 @@ function doSmell(game: Game, cell: Cell): string {
     let distantSmells = '';
 
     if (!!(cell.getTags() & TAGS.TRAP_PIT)) {
-        localSmells = format('You smell deep, cold earth and sharp decay rising from the huge pit.');
+        localSmells = format("You smell deep, cold earth and sharp decay rising from the huge pit you've just fallen into.");
     } else if (!!(cell.getTags() & TAGS.TRAP_FLAMETHOWER)) {
-        localSmells = format('You smell the sharp, thick aroma of kerosene rising from the pool of liquid.');
+        localSmells = format('You smell the sharp, thick aroma of kerosene rising from a pool of liquid at your feet.');
     } else if (!!(cell.getTags() & TAGS.START)) {
         localSmells = format('You smell the sharp, metallic odor of molten rock coming from door to the north.');
     } else if (!!(cell.getTags() & TAGS.FINISH)) {
