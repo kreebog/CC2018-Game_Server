@@ -613,6 +613,7 @@ function startServer() {
                 // refresh some duplicated action values
                 action.score = game.getScore().toJSON();
                 action.location = game.getPlayer().Location;
+                action.playerState = game.getPlayer().State;
 
                 // store the action on the game action stack and return it to the requester as json
                 game.addAction(action);
@@ -638,10 +639,12 @@ function startServer() {
                     oom.outcome.push('Your poor little mouse body has fallen over from fatigue after running around the maze long enough to have visited every room three times over.');
                     oom.outcome.push('GAME OVER - OUT OF MOVES');
                     // refresh some duplicated action values
-                    oom.score = game.getScore().toJSON();
                     game.getScore().setGameResult(GAME_RESULTS.OUT_OF_MOVES);
                     game.setState(GAME_STATES.FINISHED);
                     game.getPlayer().addState(PLAYER_STATES.DEAD);
+                    oom.location = game.getPlayer().Location;
+                    oom.score = game.getScore().toJSON();
+                    oom.playerState = game.getPlayer().State;
                     game.addAction(oom);
                 }
 

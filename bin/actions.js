@@ -20,7 +20,7 @@ let nullJumps = [
     'You do some jumping jacks.  Is this really the best time to work on your cardio?',
     'You try to see if you can jump high enough to touch the ceiling. Nope. Not even close.',
     'You jump around. Jump around. Jump up, jump up, and get down.',
-    'You decide to try to do a backflip and fail miserably, landing in a heap on the floor.'
+    'You decide to try to do a back flip and fail miserably, landing in a heap on the floor.'
 ];
 function doLook(game, dir, action) {
     let player = game.getPlayer();
@@ -195,7 +195,7 @@ function doJump(game, dir, action) {
             // jump didn't end the game
             if (nextCell.isDirOpen(dir)) {
                 // jump was safe
-                // udpate game vars for the cell we're jumping over
+                // update game vars for the cell we're jumping over
                 game.getScore().addMove();
                 game.getPlayer().Location = nextCell.getPos();
                 nextCell.addVisit(game.getScore().getMoveCount());
@@ -229,7 +229,7 @@ function doJump(game, dir, action) {
                     game.setState(Enums_1.GAME_STATES.FINISHED);
                     game.getPlayer().addState(Enums_1.PLAYER_STATES.DEAD);
                     doAddTrophy(game, action, Enums_1.TROPHY_IDS.TOO_HOT_TO_HANDLE);
-                    action.outcome.push('Your beautiful jump should have ended in a beautiful landing, but instead you slipped in a pool of kerosene, landed on the detonator, and blew yourself to smitherines.');
+                    action.outcome.push('Your beautiful jump should have ended in a beautiful landing, but instead you slipped in a pool of kerosene, landed on the detonator, and blew yourself to smithereens.');
                     action.outcome.push('YOU HAVE DIED');
                 }
                 // render engram for the cell we land in
@@ -261,7 +261,7 @@ function doJump(game, dir, action) {
         } // next cell open
     } // next cell not open
     // HIT A WALL
-    action.engram.sight = util_1.format('You see stars as jump rightinto the wall to the %s.', getDirName(dir));
+    action.engram.sight = util_1.format('You see stars as jump right into the wall to the %s.', getDirName(dir));
     action.engram.touch = 'You feel your bones rattle as you collide with the wall.';
     action.engram.sound = 'You hear a sharp ringing as you hit the wall.';
     action.engram.smell = 'You smell blood after you jump into the wall.  Is your nose broken?';
@@ -388,7 +388,7 @@ function doMove(game, dir, action) {
 exports.doMove = doMove;
 function doAddTrophy(game, action, trophyId) {
     log.debug(__filename, 'doAddTrophy()', util_1.format('Trophy Awarded: [%s]', Enums_1.TROPHY_IDS[trophyId]));
-    // don't show repeated trophies exept for flawless victory
+    // don't show repeated trophies except for flawless victory
     if (!game.getTeam().hasTrophy(trophyId) && trophyId != Enums_1.TROPHY_IDS.FLAWLESS_VICTORY) {
         action.outcome.push('NEW TROPHY: ' + ITrophy_1.Trophies[trophyId].name);
     }
@@ -444,7 +444,7 @@ function doSeeNext(cell, dir, ambientMode) {
     if (ambientMode) {
         // only return ambient sense data
         if (!!(cell.getTags() & Enums_1.TAGS.START)) {
-            ret = util_1.format(' A faint, red glow barlely illuminates the room.');
+            ret = util_1.format(' A faint, red glow barely illuminates the room.');
         }
         else if (!!(cell.getTags() & Enums_1.TAGS.FINISH)) {
             ret = util_1.format(' A faint, cool light barely illuminates the room.');
@@ -557,10 +557,10 @@ function doSmell(game, cell) {
     let ambientSmells = '';
     let distantSmells = '';
     if (!!(cell.getTags() & Enums_1.TAGS.TRAP_PIT)) {
-        localSmells = util_1.format('You smell deep, cold earth and sharp decay rising from the huge pit.');
+        localSmells = util_1.format("You smell deep, cold earth and sharp decay rising from the huge pit you've just fallen into.");
     }
     else if (!!(cell.getTags() & Enums_1.TAGS.TRAP_FLAMETHOWER)) {
-        localSmells = util_1.format('You smell the sharp, thick aroma of kerosene rising from the pool of liquid.');
+        localSmells = util_1.format('You smell the sharp, thick aroma of kerosene rising from a pool of liquid at your feet.');
     }
     else if (!!(cell.getTags() & Enums_1.TAGS.START)) {
         localSmells = util_1.format('You smell the sharp, metallic odor of molten rock coming from door to the north.');
