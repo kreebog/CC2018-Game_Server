@@ -564,6 +564,32 @@ function startServer() {
                 action.location = game.getPlayer().Location;
                 // store the action on the game action stack and return it to the requester as json
                 game.addAction(action);
+                // check for move limit
+                let maxMoveCount = game.getMaze().getWidth() * game.getMaze().getHeight() * 3;
+                if (game.getScore().getMoveCount() >= maxMoveCount) {
+                    // whip up a new action for end of game - out of moves
+                    let oom = {
+                        action: '',
+                        mazeId: game.getMaze().getId(),
+                        direction: 'N/A',
+                        engram: { sight: '', sound: '', smell: '', touch: '', taste: '' },
+                        location: game.getPlayer().Location,
+                        score: game.getScore().toJSON(),
+                        playerState: game.getPlayer().State,
+                        outcome: new Array(),
+                        botCohesion: new Array(),
+                        trophies: new Array()
+                    };
+                    act.doAddTrophy(game, oom, Enums_1.TROPHY_IDS.OUT_OF_MOVES);
+                    oom.outcome.push('Your poor little mouse body has fallen over from fatigue after running around the maze long enough to have visited every room three times over.');
+                    oom.outcome.push('GAME OVER - OUT OF MOVES');
+                    // refresh some duplicated action values
+                    oom.score = game.getScore().toJSON();
+                    game.getScore().setGameResult(cc2018_ts_lib_3.GAME_RESULTS.OUT_OF_MOVES);
+                    game.setState(cc2018_ts_lib_3.GAME_STATES.FINISHED);
+                    game.getPlayer().addState(Enums_1.PLAYER_STATES.DEAD);
+                    game.addAction(oom);
+                }
                 // handle game end states - don't track scores or trophies on abort
                 if (game.getState() > cc2018_ts_lib_3.GAME_STATES.IN_PROGRESS && game.getState() != cc2018_ts_lib_3.GAME_STATES.ABORTED) {
                     log.debug(__filename, req.url, util_1.format('Game [%s] with result [%s]', cc2018_ts_lib_3.GAME_STATES[game.getState()], cc2018_ts_lib_3.GAME_RESULTS[game.getScore().getGameResult()]));
@@ -655,12 +681,14 @@ function startServer() {
                             break;
                         }
                         case 'WRITE': {
+                            let message = '';
                             if (req.query.message === undefined) {
-                                log.warn(__filename, req.url, 'Message argument not supplied for action WRITE, aborting action.');
-                                return res.status(400).json({ status: 'Message is required for ?act=write. Try ?act=write&dir=none&message=Hello%20World' });
+                                log.warn(__filename, req.url, 'Message argument not supplied for action WRITE, defaulting to "X"');
+                            }
+                            else {
+                                message = req.query.message + '';
                             }
                             // get the message and clean it up
-                            let message = req.query.message + '';
                             message = message.trim();
                             // write it
                             act.doWrite(game, action, message);
@@ -683,6 +711,32 @@ function startServer() {
                 action.location = game.getPlayer().Location;
                 // store the action on the game action stack and return it to the requester as json
                 game.addAction(action);
+                // check for move limit
+                let maxMoveCount = game.getMaze().getWidth() * game.getMaze().getHeight() * 3;
+                if (game.getScore().getMoveCount() >= maxMoveCount) {
+                    // whip up a new action for end of game - out of moves
+                    let oom = {
+                        action: '',
+                        mazeId: game.getMaze().getId(),
+                        direction: 'N/A',
+                        engram: { sight: '', sound: '', smell: '', touch: '', taste: '' },
+                        location: game.getPlayer().Location,
+                        score: game.getScore().toJSON(),
+                        playerState: game.getPlayer().State,
+                        outcome: new Array(),
+                        botCohesion: new Array(),
+                        trophies: new Array()
+                    };
+                    act.doAddTrophy(game, oom, Enums_1.TROPHY_IDS.OUT_OF_MOVES);
+                    oom.outcome.push('Your poor little mouse body has fallen over from fatigue after running around the maze long enough to have visited every room three times over.');
+                    oom.outcome.push('GAME OVER - OUT OF MOVES');
+                    // refresh some duplicated action values
+                    oom.score = game.getScore().toJSON();
+                    game.getScore().setGameResult(cc2018_ts_lib_3.GAME_RESULTS.OUT_OF_MOVES);
+                    game.setState(cc2018_ts_lib_3.GAME_STATES.FINISHED);
+                    game.getPlayer().addState(Enums_1.PLAYER_STATES.DEAD);
+                    game.addAction(oom);
+                }
                 // handle game end states - don't track scores or trophies on abort
                 if (game.getState() > cc2018_ts_lib_3.GAME_STATES.IN_PROGRESS && game.getState() != cc2018_ts_lib_3.GAME_STATES.ABORTED) {
                     log.debug(__filename, req.url, util_1.format('Game [%s] with result [%s]', cc2018_ts_lib_3.GAME_STATES[game.getState()], cc2018_ts_lib_3.GAME_RESULTS[game.getScore().getGameResult()]));
