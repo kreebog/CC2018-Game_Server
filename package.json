@@ -1,6 +1,6 @@
 {
     "name": "cc2018-game_server",
-    "version": "1.5.0",
+    "version": "1.5.10",
     "description": "Primary game server for Code Camp 2018",
     "main": "bin/server.js",
     "scripts": {
@@ -22,7 +22,7 @@
         "@types/collections": "^5.0.0",
         "@types/request": "^2.47.1",
         "body-parser": "^1.18.3",
-        "cc2018-ts-lib": "^1.4.51",
+        "cc2018-ts-lib": "^1.4.60",
         "collections": "^5.1.4",
         "compression": "^1.7.3",
         "dotenv": "^6.0.0",

@@ -94,7 +94,7 @@ function mazeLoaded(mazeId) {
     return false;
 }
 // Pull the list of available mazes from the maze-service
-// cache it locally. Refreshses as part of the incoming request
+// cache it locally. Refreshes as part of the incoming request
 // process if consts.CACHE_DELAY is exceeded
 function updateMazesCache() {
     request.doGet(EP['mazes'], function handleGetMazes(res, body) {
@@ -131,7 +131,7 @@ function updateTeamsCache() {
     });
 }
 // Same as updateMazesCache, but with scores
-function udpateScoresCache() {
+function updateScoresCache() {
     request.doGet(EP['scores'], function handleLoadScores(res, body) {
         lastScoreListFill = Date.now();
         let data = JSON.parse(body);
@@ -155,7 +155,7 @@ function bootstrap() {
     if (lastTeamListFill == 0)
         updateTeamsCache();
     if (lastScoreListFill == 0)
-        udpateScoresCache();
+        updateScoresCache();
     if (lastMazeListFill > 0 && lastScoreListFill > 0 && lastTeamListFill > 0) {
         log.debug(__filename, 'bootstrap()', util_1.format('Caches populated, starting server. mazeList:%d, scoreList:%d, teams:%d', mazeList.length, scoreList.length, teams.length));
         clearInterval(bootstrapTimer); // kill the timer
@@ -172,7 +172,7 @@ function bootstrap() {
 function gcGames() {
     let gcTrigger = Math.floor(consts.MAX_GAMES_IN_MEMORY * 0.9); // if array is 90% full, trigger collection
     if (games.length >= gcTrigger) {
-        log.debug(__filename, 'gcGames()', util_1.format('Active games garbage collection triggered. GC_TriggerSize: %s, Current Size: %s, Max Size: %s', gcTrigger, games.length, consts.MAX_GAMES_IN_MEMORY));
+        log.debug(__filename, 'gcGames()', util_1.format('SHALLOW games garbage collection triggered. GC_TriggerSize: %s, Current Size: %s, Max Size: %s', gcTrigger, games.length, consts.MAX_GAMES_IN_MEMORY));
         let cleanGames = new Array();
         // remove all of the aborted games
         games.forEach(game => {
@@ -181,12 +181,46 @@ function gcGames() {
                 log.trace(__filename, 'gcGames()', util_1.format('Active game preserved in games array: %s', game.getId()));
             }
             else {
-                log.trace(__filename, 'gcGames()', util_1.format('Abandoned game removed from games array: %s', game.getId()));
+                log.trace(__filename, 'gcGames()', util_1.format('Aborted game removed from games array: %s', game.getId()));
             }
         });
+        // reset the games list with all aborted games removed
+        games = cleanGames;
+        // then make sure that there's still room on the stack...
+        let gameCount = games.length;
+        if (gameCount >= consts.MAX_GAMES_IN_MEMORY) {
+            log.debug(__filename, 'gcGames()', util_1.format('DEEP games garbage collection triggered. GC_TriggerSize: %s, Current Size: %s, Max Size: %s', gcTrigger, games.length, consts.MAX_GAMES_IN_MEMORY));
+            // no room - need to force out old, active games
+            while (gameCount >= gcTrigger) {
+                let topAge = -1;
+                let oldestIndex = 0;
+                // first find the oldest (by last accessed time) entry
+                for (let x = 0; x < games.length; x++) {
+                    if (games[x].getLastAccessTime() > topAge) {
+                        oldestIndex = x;
+                        topAge = games[x].getLastAccessTime();
+                    }
+                }
+                // if the oldest is at the top of the stack, shift it out
+                if (oldestIndex == 0) {
+                    let deletedGame = games.shift();
+                    log.warn(__filename, 'gcGames()', util_1.format('FORCE DELETION (shift) of active Game [%s] from games[%s].', deletedGame === undefined ? 'CANNOT_GET_GAME_ID' : deletedGame.getId(), 0));
+                }
+                else {
+                    // rebuild the array without the oldest entry
+                    let newList = new Array();
+                    log.warn(__filename, 'gcGames()', util_1.format('FORCE DELETION (rebuild) of active Game [%s] from games[%s].', games[oldestIndex].getId(), oldestIndex));
+                    for (let x = 0; x < games.length; x++) {
+                        if (x != oldestIndex)
+                            newList.push(games[x]);
+                    }
+                    games = newList;
+                }
+                gameCount = games.length;
+            }
+        }
         // reassign the games array
         log.debug(__filename, 'gcGames()', util_1.format('Collection complete. GC_TriggerSize: %s, Original Size: %s, New Size: %s', gcTrigger, games.length, cleanGames.length));
-        games = cleanGames;
     }
     else {
         log.debug(__filename, 'gcGames()', util_1.format('Games array garbage collection not necessary. GC_TriggerSize: %s, Current Size: %s, Max Size: %s', gcTrigger, games.length, consts.MAX_GAMES_IN_MEMORY));
@@ -248,14 +282,35 @@ function abortGame(gameId) {
  *
  * @param teamId
  */
-function getActiveGameIdByTeam(teamId) {
+function getActiveTeamGameId(teamId) {
     for (let n = 0; n < games.length; n++) {
-        let g = games[n];
-        if (g.getTeam().getId() == teamId) {
-            let gs = g.getState();
-            if (gs < cc2018_ts_lib_3.GAME_STATES.FINISHED) {
+        // only a team game if no botId value is set
+        if (games[n].getTeam().getId() == teamId && games[n].getBotId() == '') {
+            if (games[n].getState() < cc2018_ts_lib_3.GAME_STATES.FINISHED) {
                 log.debug(__filename, 'getActiveGameIdByTeam()', 'Game found: ' + games[n].getId());
                 return games[n].getId();
+            }
+        }
+    }
+    return '';
+}
+/**
+ * Quickly find and return the game id for the first game
+ * in progress for the given team
+ *
+ * @param teamId
+ */
+function getActiveBotGameId(teamId, botId) {
+    if (botId.trim() == '')
+        return '';
+    for (let x = 0; x < games.length; x++) {
+        // only a team game if no botId value is set
+        let gameTeamId = games[x].getTeam().getId();
+        let gameBotId = games[x].getBotId();
+        if (games[x].getTeam().getId() == teamId && games[x].getBotId() == botId) {
+            if (games[x].getState() < cc2018_ts_lib_3.GAME_STATES.FINISHED) {
+                log.debug(__filename, 'getActiveBotGameId()', 'Game found: ' + games[x].getId());
+                return games[x].getId();
             }
         }
     }
@@ -289,14 +344,14 @@ function findMaze(mazeId) {
     log.warn(__filename, 'findMaze()', 'Maze not found: ' + mazeId);
     throw new Error('Maze not found: ' + mazeId);
 }
-function newTeamGame(mazeId, teamId, forcedGameId) {
-    let fnName = util_1.format('newTeamGame(%s, %s, %s)', mazeId, teamId, forcedGameId);
+function newBotGame(mazeId, teamId, botId) {
+    let fnName = util_1.format('newBotGame(%s, %s, %s)', mazeId, teamId, botId);
     let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
     let maze;
     let team;
     // get the maze
     try {
-        maze = findMaze(mazeId); // throws error if not found
+        maze = new cc2018_ts_lib_2.Maze(findMaze(mazeId).toJSON()); // throws error if not found
     }
     catch (err) {
         log.warn(__filename, fnName, 'Maze not found in Maze Cache: ' + mazeId);
@@ -314,7 +369,56 @@ function newTeamGame(mazeId, teamId, forcedGameId) {
     let player = new cc2018_ts_lib_1.Player(maze.getStartCell(), Enums_1.PLAYER_STATES.STANDING);
     let score = new cc2018_ts_lib_2.Score();
     // configure game
-    let game = new cc2018_ts_lib_2.Game(maze, team, player, score);
+    let game = new cc2018_ts_lib_2.Game(maze, team, player, score, 1, botId);
+    // set game state to new
+    game.setState(cc2018_ts_lib_3.GAME_STATES.NEW);
+    // set the score key elements
+    game.getScore().setMazeId(game.getMaze().getId());
+    game.getScore().setTeamId(game.getTeam().getId());
+    game.getScore().setGameId(game.getId());
+    game.getScore().setBotId(botId);
+    // add a visit to the start cell
+    game.getMaze()
+        .getCell(game.getPlayer().Location)
+        .addVisit(0);
+    // make some room in the games array if it's full
+    gcGames();
+    // store the game
+    if (games.length > consts.MAX_GAMES_IN_MEMORY) {
+        log.warn(__filename, fnName, util_1.format('Active Games Array is full with %s active games. Try again later.', games.length));
+        return { status: util_1.format('Active Games Array is full with %s active games. Try again later.', games.length) };
+    }
+    games.push(game);
+    // log and return status
+    log.info(__filename, fnName, 'New Bot Game added to games list. GameId=' + game.getId());
+    return { status: 'Game created.', url: gameUrl + game.getId() };
+}
+function newTeamGame(mazeId, teamId, forcedGameId) {
+    let fnName = util_1.format('newTeamGame(%s, %s, %s)', mazeId, teamId, forcedGameId);
+    let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
+    let maze;
+    let team;
+    // get the maze
+    try {
+        maze = new cc2018_ts_lib_2.Maze(findMaze(mazeId).toJSON()); // throws error if not found
+    }
+    catch (err) {
+        log.warn(__filename, fnName, 'Maze not found in Maze Cache: ' + mazeId);
+        return { status: 'Unable to create game. Maze not found: ' + mazeId };
+    }
+    // get the team
+    try {
+        team = new cc2018_ts_lib_2.Team(getTeamData(teamId)); // throws error if not found
+    }
+    catch (err) {
+        log.warn(__filename, fnName, 'Team not found in Team Cache: ' + teamId);
+        return { status: 'Unable to create game. Team not found: ' + teamId };
+    }
+    // create player and score objects
+    let player = new cc2018_ts_lib_1.Player(maze.getStartCell(), Enums_1.PLAYER_STATES.STANDING);
+    let score = new cc2018_ts_lib_2.Score();
+    // configure game
+    let game = new cc2018_ts_lib_2.Game(maze, team, player, score, 1);
     // set game state to new
     game.setState(cc2018_ts_lib_3.GAME_STATES.NEW);
     // set the score key elements
@@ -361,7 +465,7 @@ function startServer() {
             }
             if (Date.now() - lastScoreListFill > consts.CACHE_DELAY) {
                 log.info(__filename, 'startServer()', util_1.format('scoreList cache expired - calling refresh.'));
-                udpateScoresCache();
+                updateScoresCache();
             }
             if (Date.now() - lastTeamListFill > consts.CACHE_DELAY) {
                 log.info(__filename, 'startServer()', util_1.format('teams cache expired - calling refresh.'));
@@ -456,8 +560,48 @@ function startServer() {
                 res.json({ status: 'Game aborted:' + gameId });
             }
         });
+        // create the next game round for ALL GAME TYPES
+        app.get('/game/next-round/:gameId', function (req, res) {
+            // 1: gameId must be a game that's in memory, but !NEW, !IN_PROGRESS, && !ABANDONED
+            let gameId = req.params.gameId;
+            let game;
+            try {
+                game = getGame(gameId);
+                if (game.getState() <= cc2018_ts_lib_3.GAME_STATES.IN_PROGRESS) {
+                    return res.status(400).json({ status: util_1.format('Game [%s] is still in progress.  Finish  playing or Abort (/game/abort/:gameId/) it and try again.', gameId) });
+                }
+                // set next round - resets score, clears actions, resets player state, and resets player pos to start cell
+                game.nextRound();
+                // log and return status
+                log.info(__filename, req.url, util_1.format('Game [%s] - starting round #%s.', game.getId(), game.getRound()));
+                return { status: 'Game created.', url: consts.GAME_SVC_EXT_URL + '/game/' + gameId };
+            }
+            catch (err) {
+                res.status(404).json({ status: 'Game Not Found' });
+            }
+            // clean up games list if we can
+            gcGames();
+        });
+        // create new SINGLE BOT game
+        app.get('/game/new/:mazeId/:teamId/:botId', function (req, res) {
+            // 1: Game for given Team + Bot must not already be active in memory
+            let mazeId = req.params.mazeId;
+            let teamId = req.params.teamId;
+            let botId = req.params.botId;
+            let gameId = getActiveBotGameId(teamId, botId);
+            if (gameId != '') {
+                return res.status(400).json({ status: 'Bot Game already in progress.', url: consts.GAME_SVC_EXT_URL + '/game/' + gameId });
+            }
+            try {
+                res.json(newBotGame(mazeId, teamId, botId));
+            }
+            catch (err) {
+                log.error(__filename, req.url, util_1.format('Unable to create new Bot Game.  Error: %s ', err.message));
+                res.status(500).json({ status: util_1.format('Unable to create new Bot Game.  Error: %s ', err.message) });
+            }
+        });
         /**
-         * Attempts to create a new game using the given Team and Maze
+         * Attempts to create a new TEAM GAME using the given Team and Maze
          * -- If team is already in a game, 400 + status:already running
          * -- If team or maze not found, returns error.
          * -- passing /gameId attempts to force the game ID value - useful for testing
@@ -467,7 +611,7 @@ function startServer() {
                 // create and return a new game against the given maze
                 let teamId = req.params.teamId;
                 let mazeId = req.params.mazeId;
-                let gameId = getActiveGameIdByTeam(teamId);
+                let gameId = getActiveTeamGameId(teamId);
                 let forcedGameId = req.params.forcedGameId !== undefined ? req.params.forcedGameId : '';
                 let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
                 // make the team isn't already playing
@@ -628,7 +772,7 @@ function startServer() {
          * new state.
          */
         app.get(['/game/action/:gameId', '/game/action/:gameId/:botId'], function (req, res) {
-            log.debug(__filename, req.url, 'ACTION REQUEST RECIEVED');
+            log.debug(__filename, req.url, 'ACTION REQUEST RECEIVED');
             let start = Date.now();
             try {
                 // make sure we have the right arguments
@@ -815,7 +959,7 @@ function startServer() {
             }
             catch (err) {
                 log.error(__filename, req.url, 'Error getting action: ' + err.stack);
-                res.status(404).json({ status: util_1.format('Error getting actions from game [%s]. Bad query? Example: /actions/get/<GAMEID>?start=0&count=50') });
+                res.status(404).json({ status: util_1.format('Error getting actions from game [%s]. Bad query? Example: /actions/get/<GAME_ID>?start=0&count=50') });
             }
         });
         /** TEAM ROUTES **/
@@ -854,7 +998,7 @@ function startServer() {
  */
 process.on('SIGINT', function onSigInt() {
     // all done, close the db connection
-    log.info(__filename, 'onSigInt()', 'Got SIGINT - Exiting applicaton...');
+    log.info(__filename, 'onSigInt()', 'Got SIGINT - Exiting application...');
     doShutdown();
 });
 /**
@@ -862,7 +1006,7 @@ process.on('SIGINT', function onSigInt() {
  */
 process.on('SIGTERM', function onSigTerm() {
     // all done, close the db connection
-    log.info(__filename, 'onSigTerm()', 'Got SIGTERM - Exiting applicaton...');
+    log.info(__filename, 'onSigTerm()', 'Got SIGTERM - Exiting application...');
     doShutdown();
 });
 /**

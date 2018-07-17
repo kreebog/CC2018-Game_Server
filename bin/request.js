@@ -15,18 +15,18 @@ const log = cc2018_ts_lib_1.Logger.getInstance();
  * @param callback - Callback to send response data to
  */
 function doGet(url, callback) {
-    log.debug(__filename, 'doGet()', util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
+    log.trace(__filename, 'doGet()', util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
     request_1.default(url, (err, res, body) => {
         if (err) {
             log.error(__filename, 'doGet()', util_1.format('Error from %s \n::ERROR INFO:: %s', url, JSON.stringify(err)));
             return err;
         }
         if (res.statusCode != 200) {
-            log.warn(__filename, 'doGet()', util_1.format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
+            log.warn(__filename, 'doGet()', util_1.format('Response Code %d (%s) received! Discarding response from %s', res.statusCode, res.statusMessage, url));
             return;
         }
         // all good, apparently - fire othe callback
-        log.debug(__filename, 'doGet()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
+        log.trace(__filename, 'doGet()', util_1.format('Response %d (%s) received. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
         callback(res, body);
     });
 }
@@ -38,7 +38,7 @@ exports.doGet = doGet;
  * @param callback - Callback to send response data to
  */
 function doPost(url, body, callback) {
-    log.debug(__filename, util_1.format('doPost(%s, %s, %s)', url, body, callback.name), util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
+    log.trace(__filename, util_1.format('doPost(%s, %s, %s)', url, body, callback.name), util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
     let options = {
         url: url,
         json: body
@@ -49,11 +49,11 @@ function doPost(url, body, callback) {
             return err;
         }
         if (res.statusCode != 200) {
-            log.warn(__filename, 'doPost()', util_1.format('Response Code %d (%s) recieved! Discarding response from %s', res.statusCode, res.statusMessage, url));
+            log.warn(__filename, 'doPost()', util_1.format('Response Code %d (%s) received! Discarding response from %s', res.statusCode, res.statusMessage, url));
             return;
         }
         // all good, apparently - fire the callback
-        log.debug(__filename, 'doPost()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
+        log.trace(__filename, 'doPost()', util_1.format('Response %d (%s) received. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
         callback(res, body);
     });
 }
@@ -65,7 +65,7 @@ exports.doPost = doPost;
  * @param callback - Callback to send response data to
  */
 function doPut(url, body, callback) {
-    log.debug(__filename, util_1.format('doPut(%s, %s, %s)', url, body, callback.name), util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
+    log.trace(__filename, util_1.format('doPut(%s, %s, %s)', url, body, callback.name), util_1.format('Requesting [%s] with callback to [%s]', url, callback.name));
     let options = {
         url: url,
         json: body
@@ -80,7 +80,7 @@ function doPut(url, body, callback) {
             return;
         }
         // all good, apparently - fire othe callback
-        log.debug(__filename, 'doPut()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
+        log.trace(__filename, 'doPut()', util_1.format('Response %d (%s) recieved. Calling back to [%s]', res.statusCode, res.statusMessage, callback.name));
         callback(res, body);
     });
 }

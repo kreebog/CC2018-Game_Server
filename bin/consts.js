@@ -30,7 +30,8 @@ exports.GAME_SVC_EXT_URL = process.env.GAME_SVC_EXT_URL + ':' + GAME_SVC_EXT_POR
 exports.CACHE_DELAY = process.env.GAME_SVC_CACHE_REFRESH || 30000; // milliseconds between cache refreshes (skipped in server.ts if no new activity detected)
 exports.GAME_SVC_NAME = 'game-server';
 exports.DELETE_PASSWORD = process.env.DELETE_PASSWORD;
-exports.MAX_GAMES_IN_MEMORY = 60; // maximum number of games allowed to be stored in the games array
+exports.MAX_GAMES_IN_MEMORY = parseInt(process.env.MAX_GAMES_IN_MEMORY + '') || 100; // maximum number of games allowed to be stored in the games array
+exports.MAX_ROUNDS_PER_GAME = parseInt(process.env.MAX_ROUNDS_PER_GAME + '') || 10; // maximum number of rounds per game
 exports.APP_VERSION = getPackageVersion();
 function getPackageVersion() {
     let data = JSON.parse(fs_1.default.readFileSync(path_1.default.resolve('package.json'), 'utf8'));

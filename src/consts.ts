@@ -35,7 +35,8 @@ export const CACHE_DELAY = process.env.GAME_SVC_CACHE_REFRESH || 30000; // milli
 export const GAME_SVC_NAME = 'game-server';
 export const DELETE_PASSWORD = process.env.DELETE_PASSWORD;
 
-export const MAX_GAMES_IN_MEMORY = 60; // maximum number of games allowed to be stored in the games array
+export const MAX_GAMES_IN_MEMORY = parseInt(process.env.MAX_GAMES_IN_MEMORY + '') || 100; // maximum number of games allowed to be stored in the games array
+export const MAX_ROUNDS_PER_GAME = parseInt(process.env.MAX_ROUNDS_PER_GAME + '') || 10; // maximum number of rounds per game
 
 export const APP_VERSION = getPackageVersion();
 function getPackageVersion(): string {
