@@ -393,8 +393,8 @@ function newBotGame(mazeId, teamId, botId) {
     log.info(__filename, fnName, 'New Bot Game added to games list. GameId=' + game.getId());
     return { status: 'Game created.', url: gameUrl + game.getId() };
 }
-function newTeamGame(mazeId, teamId, forcedGameId) {
-    let fnName = util_1.format('newTeamGame(%s, %s, %s)', mazeId, teamId, forcedGameId);
+function newTeamGame(mazeId, teamId) {
+    let fnName = util_1.format('newTeamGame(%s, %s)', mazeId, teamId);
     let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
     let maze;
     let team;
@@ -429,12 +429,6 @@ function newTeamGame(mazeId, teamId, forcedGameId) {
     game.getMaze()
         .getCell(game.getPlayer().Location)
         .addVisit(0);
-    // handle forced game id override
-    if (forcedGameId != '') {
-        log.warn(__filename, fnName, 'New Game(): ID generation overridden with: ' + forcedGameId);
-        game.forceSetId(forcedGameId);
-        game.getScore().setGameId(forcedGameId); // update score key
-    }
     // make some room in the games array if it's full
     gcGames();
     // store the game
@@ -606,26 +600,20 @@ function startServer() {
          * -- If team or maze not found, returns error.
          * -- passing /gameId attempts to force the game ID value - useful for testing
          */
-        app.get(['/game/new/:mazeId/:teamId', '/game/new/:mazeId/:teamId/:forcedGameId'], function (req, res) {
+        app.get('/game/new/:mazeId/:teamId', function (req, res) {
             try {
                 // create and return a new game against the given maze
                 let teamId = req.params.teamId;
                 let mazeId = req.params.mazeId;
                 let gameId = getActiveTeamGameId(teamId);
-                let forcedGameId = req.params.forcedGameId !== undefined ? req.params.forcedGameId : '';
                 let gameUrl = consts.GAME_SVC_EXT_URL + '/game/';
                 // make the team isn't already playing
                 if (gameId != '') {
                     log.debug(__filename, req.url, util_1.format('Team %s already in game %s.', teamId, gameId));
                     return res.status(400).json({ status: util_1.format('Team %s already in game %s.', teamId, gameId), url: gameUrl + gameId });
                 }
-                // check for a forced game id
-                if (forcedGameId != '' && isGameInProgress(forcedGameId)) {
-                    log.debug(__filename, req.url, util_1.format('Game %s already exists - force a different gameId.', forcedGameId));
-                    return res.status(400).json({ status: util_1.format('Game %s already exists - force a different gameId.', forcedGameId), url: gameUrl + forcedGameId });
-                }
                 // create new Team Game
-                res.json(newTeamGame(mazeId, teamId, forcedGameId));
+                res.json(newTeamGame(mazeId, teamId));
             }
             catch (err) {
                 log.error(__filename, req.url, 'Error creating game: ' + err.toString());
