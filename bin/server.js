@@ -695,6 +695,9 @@ function startServer() {
                 action.score = game.getScore().toJSON();
                 action.location = game.getPlayer().Location;
                 action.playerState = game.getPlayer().State;
+                // move game to in progress sate if it's currently new
+                if (!!(game.getState() & cc2018_ts_lib_3.GAME_STATES.NEW))
+                    game.setState(cc2018_ts_lib_3.GAME_STATES.IN_PROGRESS);
                 // store the action on the game action stack and return it to the requester as json
                 game.addAction(action);
                 // check for move limit

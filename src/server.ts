@@ -764,6 +764,9 @@ function startServer() {
                 action.location = game.getPlayer().Location;
                 action.playerState = game.getPlayer().State;
 
+                // move game to in progress sate if it's currently new
+                if (!!(game.getState() & GAME_STATES.NEW)) game.setState(GAME_STATES.IN_PROGRESS);
+
                 // store the action on the game action stack and return it to the requester as json
                 game.addAction(action);
 

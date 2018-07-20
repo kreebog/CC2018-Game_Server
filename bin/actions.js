@@ -69,7 +69,13 @@ function doLook(game, dir, action) {
         if (action.engram.taste == '')
             action.engram.taste = doTaste(game, player, cell, dir);
     }
-    game.getScore().addMove();
+    // first look is free
+    if (!!(game.getState() & Enums_1.GAME_STATES.NEW)) {
+        game.setState(Enums_1.GAME_STATES.IN_PROGRESS);
+    }
+    else {
+        game.getScore().addMove();
+    }
     return;
 }
 exports.doLook = doLook;
