@@ -137,7 +137,7 @@ export function doJump(game: Game, dir: DIRS, action: IAction) {
         // jumps cost two moves
         game.getScore().setMoveCount(game.getScore().getMoveCount() + 2);
         action.engram.touch = nullJumps[njIdx];
-        if ((njIdx = nullJumps.length - 1)) {
+        if (njIdx == nullJumps.length - 1) {
             player.addState(PLAYER_STATES.SITTING);
         }
         baselineEngram(game, action.engram, player, cell, dir);
@@ -178,7 +178,13 @@ export function doJump(game: Game, dir: DIRS, action: IAction) {
             action.engram.sound = format('The cheering and applause of the scientist is so loud that it hurts your ears.');
             action.engram.smell = format("Your nose twitches as it's assaulted by the smells of iodine, rubbing alcohol, betadine, and caramel-mocha frappuccino.");
             action.engram.taste = format('You can already taste the cheese that you know is waiting for you in your cage!');
-            action.outcome.push(format('Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as a scientist gently picks you up and carries you back to your cage.', game.getMaze().getSeed(), game.getScore().getMoveCount()));
+            action.outcome.push(
+                format(
+                    'Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as a scientist gently picks you up and carries you back to your cage.',
+                    game.getMaze().getSeed(),
+                    game.getScore().getMoveCount()
+                )
+            );
 
             // game over - server function will handle saving and cleanup
             game.getPlayer().Location = new Pos(game.getMaze().getFinishCell().row, game.getMaze().getFinishCell().col);
@@ -298,7 +304,7 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
 
         game.getScore().addMove();
         action.engram.touch = nullMotions[nmIdx];
-        if ((nmIdx = nullMotions.length - 1)) {
+        if (nmIdx == nullMotions.length - 1) {
             player.addState(PLAYER_STATES.SITTING);
         }
         baselineEngram(game, action.engram, player, cell, dir);
@@ -338,7 +344,13 @@ export function doMove(game: Game, dir: DIRS, action: IAction) {
             action.engram.sound = format('The cheering and applause of the scientist is so loud that it hurts your ears.');
             action.engram.smell = format("Your nose twitches as it's assaulted by the smells of iodine, rubbing alcohol, betadine, and caramel-mocha frappuccino.");
             action.engram.taste = format('You can already taste the cheese that you know is waiting for you in your cage!');
-            action.outcome.push(format('Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientist gently picks you up and carries you back to your cage.', game.getMaze().getSeed(), game.getScore().getMoveCount()));
+            action.outcome.push(
+                format(
+                    'Congratulations! You have defeated %s in %d moves. You can already taste your cheesy reward as the scientist gently picks you up and carries you back to your cage.',
+                    game.getMaze().getSeed(),
+                    game.getScore().getMoveCount()
+                )
+            );
 
             doAddTrophy(game, action, TROPHY_IDS.WINNER_WINNER_CHEDDAR_DINNER);
 

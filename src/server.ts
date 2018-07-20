@@ -1010,6 +1010,7 @@ function startServer() {
             let start: number = 0;
             let count: number = 0;
 
+            //TODO: Count param doesn't seem to work
             if (req.query.start !== undefined) start = parseInt(req.query.start + '');
             if (req.query.count !== undefined) count = parseInt(req.query.count + '');
 

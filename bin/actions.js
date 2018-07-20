@@ -138,7 +138,7 @@ function doJump(game, dir, action) {
         // jumps cost two moves
         game.getScore().setMoveCount(game.getScore().getMoveCount() + 2);
         action.engram.touch = nullJumps[njIdx];
-        if ((njIdx = nullJumps.length - 1)) {
+        if (njIdx == nullJumps.length - 1) {
             player.addState(Enums_1.PLAYER_STATES.SITTING);
         }
         baselineEngram(game, action.engram, player, cell, dir);
@@ -284,7 +284,7 @@ function doMove(game, dir, action) {
         let nmIdx = Math.floor(Math.random() * nullMotions.length);
         game.getScore().addMove();
         action.engram.touch = nullMotions[nmIdx];
-        if ((nmIdx = nullMotions.length - 1)) {
+        if (nmIdx == nullMotions.length - 1) {
             player.addState(Enums_1.PLAYER_STATES.SITTING);
         }
         baselineEngram(game, action.engram, player, cell, dir);
